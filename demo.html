@@ -7,9 +7,27 @@
 	</head>
 
 	<body>
-		<script src="js/demand.js" type="text/javascript" charset="utf-8"></script>
+		<script src="./dist/js/demand.js" type="text/javascript" charset="utf-8"></script>
 		<script type="text/javascript">
-			/*demand.define('name', ['/demand/src/js/modules/m3.js'], function(m3) {
+			demand.config({
+				baseUrl:'/demand/module',
+				alias:{
+					'as':'./asas',
+					'@asas':'/asdasd'
+				},
+				paths:{
+					app:'./m1',
+					app2:'/m2/m3/m4/../../../m2'
+				}
+			});
+			
+			demand(['app','app2'],()=>{
+				
+			});
+			
+		</script>
+		<!--<script type="text/javascript">
+			demand.define('name', ['/demand/src/js/modules/m3.js'], function(m3) {
 				function name() {
 					console.log('name module');
 				}
@@ -19,7 +37,7 @@
 
 			demand.use(function() {
 				demand('name')();
-			});*/
+			});
 
 			demand.config({
 				baseUrl: demand.origin + '/demand',
@@ -61,10 +79,7 @@
 					console.log(demand.modules.installedModules);
 				});
 			},1000);
-			
-					
-			
-		</script>
+		</script>-->
 	</body>
 
 </html>

@@ -205,10 +205,7 @@
 				lastLoadId = arg_0;
 			}
 			lastLoadModuleHandler = dep;
-		}
-	}
-
-	//运行模块
+		}	//运行模块
 	demand.use = function(callback) {
 		demand.modules.installUse.push(callback);
 		isLoad();
