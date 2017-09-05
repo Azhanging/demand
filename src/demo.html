@@ -46,19 +46,23 @@
 		</script>
 		<script type="text/javascript">
 			
-			demand.use(function() {
-				var a = demand('@js/@js_2/modules/m1.js');
-				console.log(a(123456));
-				console.log(a(22));
-				var m3 = demand('m3');
-				console.log(m3.greater(123));
-				console.log(typeof demand('@js/@js_2/modules/m4.js'));
-				console.log(demand.modules.installedModules);
-			});
-
 			demand.loadModules([
 				'@js/@js_2/modules/m4.js'
 			]);
+			
+			setTimeout(()=>{
+				demand.use(function() {
+					var a = demand('@js/@js_2/modules/m1.js');
+					console.log(a(123456));
+					console.log(a(22));
+					var m3 = demand('m3');
+					console.log(m3.greater(123));
+					console.log(typeof demand('@js/@js_2/modules/m4.js'));
+					console.log(demand.modules.installedModules);
+				});
+			},1000);
+			
+					
 			
 		</script>
 	</body>
