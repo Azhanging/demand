@@ -1,3 +1,7 @@
-demand.define('idName',['./m2','./m3'],function(){
-	console.log(1);
+demand.define('idName',['./m4','./m3','./m2'],function(m4,m3,m2){
+	return function(){
+	    m4();
+	    m3();
+	    m2.a();
+	}
 });

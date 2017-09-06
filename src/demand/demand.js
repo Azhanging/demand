@@ -3,6 +3,7 @@ import Fn from './fn';
 import {
 	setAlias,
 	setPaths,
+	setModuleQueue,
 	hasModule,
 	findModule
 } from './set';
@@ -21,10 +22,13 @@ export default function demand(dep, cb) {
 		});
 
 		//存储回调，等所有的模块加载完毕后调用
-		module.use.push(cb);
+		module.use.push({
+		   cb:cb,
+		   dep:dep
+		});
 	} else if(fn.isStr(dep)) {
 		//获取模块
-		return findModule.call(_this,dep);
+		return findModule.call(_this,dep)['_export_'];
 	}
 }
 
@@ -41,6 +45,8 @@ demand.config = function(opts) {
 	this.alias = fn.isObj(opts.alias) ? setAlias(opts.alias) : {};
 	//设置paths
 	setPaths.call(this, opts.paths);
+	//设置queue的回调
+	setModuleQueue.call(this);
 };
 
 //模块存储
@@ -70,7 +76,8 @@ demand.define = function(id, dep, cb) {
 		module['dep'] = id;
 		module['_export_'] = dep;
 	} else if(fn.isFn(id)) {
-		module['dep'] = module['id'] = null;
+	    module['id'] = null;
+		module['dep'] = [];
 		module['_export_'] = id;
 	} else {
 		throw('error');

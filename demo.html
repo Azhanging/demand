@@ -24,11 +24,16 @@
 				}
 			});
 			
-			demand(['app','./m2/m3/m4/../../../m2','./m3'],function(){
-				console.log('use');
+			demand(['app','./m2/m3/m4/../../../m2'],function(app,m2){
+				console.log(app(),m2.a());
 			});
 			
-			console.log(demand.module);
+			setTimeout(()=>{				
+				demand(['./m3'],function(){
+					console.log('456');
+				});
+			},1000)
+			
 			
 		</script>
 	</body>

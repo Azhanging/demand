@@ -1,3 +1,5 @@
 demand.define(function(){
-	console.log(3);
+	return function(){
+        console.log(3);
+    }
 });

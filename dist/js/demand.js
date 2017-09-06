@@ -4,7 +4,7 @@
  * 			(c) 2016-2017 Blue
  * 			Released under the MIT License.
  * 			https://github.com/azhanging/demand
- * 			time:Wed Sep 06 2017 14:45:57 GMT+0800 (中国标准时间)
+ * 			time:Wed Sep 06 2017 22:16:54 GMT+0800 (中国标准时间)
  * 		
  */
 /******/ (function(modules) { // webpackBootstrap
@@ -243,10 +243,13 @@ function demand(dep, cb) {
 		});
 
 		//存储回调，等所有的模块加载完毕后调用
-		module.use.push(cb);
+		module.use.push({
+			cb: cb,
+			dep: dep
+		});
 	} else if (fn.isStr(dep)) {
 		//获取模块
-		return _set.findModule.call(_this, dep);
+		return _set.findModule.call(_this, dep)['_export_'];
 	}
 }
 
@@ -263,6 +266,8 @@ demand.config = function (opts) {
 	this.alias = fn.isObj(opts.alias) ? (0, _set.setAlias)(opts.alias) : {};
 	//设置paths
 	_set.setPaths.call(this, opts.paths);
+	//设置queue的回调
+	_set.setModuleQueue.call(this);
 };
 
 //模块存储
@@ -292,7 +297,8 @@ demand.define = function (id, dep, cb) {
 		module['dep'] = id;
 		module['_export_'] = dep;
 	} else if (fn.isFn(id)) {
-		module['dep'] = module['id'] = null;
+		module['id'] = null;
+		module['dep'] = [];
 		module['_export_'] = id;
 	} else {
 		throw 'error';
@@ -321,7 +327,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * */
 
 var Queue = function () {
-    function Queue() {
+    function Queue(opts) {
         _classCallCheck(this, Queue);
 
         this.queue = [];
@@ -335,7 +341,11 @@ var Queue = function () {
     }, {
         key: "next",
         value: function next() {
-            if (this.queue.length != 0) this.queue.shift()();
+            if (this.queue.length != 0) {
+                this.queue.shift();
+            }
+
+            if (this.queue.length === 0) this.cb();
         }
     }]);
 
@@ -352,9 +362,10 @@ exports.default = Queue;
 
 
 Object.defineProperty(exports, "__esModule", {
-	value: true
+    value: true
 });
 exports.createScript = undefined;
+exports.setModuleQueue = setModuleQueue;
 exports.setAlias = setAlias;
 exports.setPaths = setPaths;
 exports.setModule = setModule;
@@ -381,132 +392,247 @@ var fn = new _fn2.default();
 
 //alias的规则
 var ALIAS_PATH = /^@\S{1,}/;
+//创建队列
+var queue = new _queue2.default();
+//依赖管理
+var depManage = [];
+
+//设置回调
+function setModuleQueue() {
+    var _this = this;
+
+    queue.cb = function () {
+        fn.each(depManage, function (depData, index) {
+            buildModuleDep.call(_this, depData);
+        });
+
+        var cbDeps = [];
+
+        fn.each(_this.module.use, function (depData, index) {
+
+            fn.each(depData.dep, function (dep, index) {
+                cbDeps.push(_this(dep));
+            });
+
+            depData.cb.apply(_this, cbDeps);
+        });
+    };
+}
+
+//设置模块内的依赖
+function buildModuleDep(depData) {
+    var _this2 = this;
+
+    var module = depData.module,
+        deps = depData.dep,
+        demandDep = [];
+
+    fn.each(deps, function (dep) {
+
+        var findM = findModule.call(_this2, dep),
+            depExport = findM['_export_'];
+
+        if (!findM.isDemand) {
+            findM['_export_'] = new depExport();
+            findM.isDemand = true;
+        }
+
+        demandDep.push(findM['_export_']);
+    });
+
+    if (!module.isDemand) {
+
+        module._export_ = module._export_.apply(this, demandDep);
+
+        module.isDemand = true;
+    }
+}
 
 //设置别名路径
 function setAlias(alias) {
-	var aliasPath = {};
-	fn.each(alias, function (path, key) {
-		if (ALIAS_PATH.test(key)) {
-			aliasPath[key] = path;
-		}
-	});
-	return aliasPath;
+    var aliasPath = {};
+    fn.each(alias, function (path, key) {
+        if (ALIAS_PATH.test(key)) {
+            aliasPath[key] = path;
+        }
+    });
+    return aliasPath;
 }
 
 //设置模块路径
 function setPaths(paths) {
-	var _this2 = this;
+    var _this3 = this;
 
-	fn.each(paths, function (path, name) {
+    var loadModules = [];
 
-		var demand = _this2,
-		    resPath = resolvePath.call(_this2, path),
-		    //处理完的路径
-		urlModules = _this2.module.urlModule,
-		    //通过url处理的模块
-		pathModules = _this2.module.pathModule; //通过config中path的模块
+    fn.each(paths, function (path, name) {
 
-		urlModules[resPath] = {
-			isLoaded: false,
-			createScript: function createScript() {
-				_createScript.call(demand, {
-					url: resPath,
-					name: name
-				});
-			}
-		};
+        var demand = _this3,
+            resPath = resolvePath.call(_this3, path),
+            //处理完的路径
+        urlModules = _this3.module.urlModule,
+            //通过url处理的模块
+        pathModules = _this3.module.pathModule,
+            //通过config中path的模块
+        pathConfig = {
+            url: resPath,
+            name: name
+        };
 
-		//如果是从paths中配置的路径
-		if (fn.isStr(name)) {
-			pathModules[name] = urlModules[resPath];
-		}
-	});
+        //检查是否存在对应的模块，存在跳过
+        if (hasModule.call(_this3, path)) {
+            var hasCreateScript = isCreateScript.call(_this3, path);
+            //当前的模块是否被加载script
+            if (hasCreateScript) {
+                hasCreateScript.call(_this3);
+            }
+            return;
+        }
+
+        urlModules[resPath] = {
+            createScript: function createScript() {
+                _createScript.call(demand, pathConfig);
+            }
+        };
+
+        //如果是从paths中配置的路径
+        if (fn.isStr(name)) {
+            pathModules[name] = urlModules[resPath];
+        }
+
+        loadModules.push(pathConfig);
+    });
+
+    //返回处理完的模块路径
+    return loadModules;
 }
 
 //创建script节点
 function _createScript(opts) {
-	var _this = this,
-	    script = document.createElement('script');
-	//获取模块
-	opts.findM = findModule.call(this, opts.url);
-	script.async = true;
-	script.src = resolveJsExt(opts.url);
-	script.onload = function () {
-		setModule.call(_this, opts);
-		opts.findM.isLoaded = true;
-		delete opts.findM.createScript;
-	};
-	script.error = function () {};
-	document.getElementsByTagName('head')[0].appendChild(script);
+    var _this4 = this;
+
+    var script = document.createElement('script');
+    //获取模块
+    opts.findM = findModule.call(this, opts.url);
+    script.async = true;
+    script.src = resolveJsExt(opts.url);
+
+    script.onload = function () {
+        delete opts.findM.createScript;
+        setModule.call(_this4, opts);
+        queue.next();
+    };
+
+    script.error = function () {};
+
+    queue.push(false);
+
+    document.getElementsByTagName('head')[0].appendChild(script);
 }
 
 //设置模块的信息
 exports.createScript = _createScript;
 function setModule(opts) {
 
-	var lastLoader = this.module.lastLoadedModule;
+    var lastLoader = this.module.lastLoadedModule,
+        dep = lastLoader.dep;
 
-	fn.each(lastLoader, function (module, type) {
-		opts.findM[type] = module;
-	});
+    //把最后加载的模块内容加载进去
+    fn.each(lastLoader, function (module, type) {
+        opts.findM[type] = module;
+    });
 
-	//扶弱当前的模块中存在id的名，设置id的模块
-	if (lastLoader.id) {
-		this.module.idModule[lastLoader.id] = opts.findM;
-	}
+    //扶弱当前的模块中存在id的名，设置id的模块
+    if (lastLoader.id) {
+        this.module.idModule[lastLoader.id] = opts.findM;
+    }
 
-	//重设最后的模块
-	resetLastLoadedModule.call(this);
+    //查看依赖，设置一下依赖
+    if (dep.length > 0) {
+        var loadModules = setPaths.call(this, dep);
+        runCreateScript.call(this, loadModules);
+    }
+
+    //设置初始化的状态
+    opts.findM.isDemand = false;
+
+    //运行模块内容，返回接口
+    depManage.unshift({
+        module: opts.findM,
+        dep: dep
+    });
+
+    //重设最后的模块
+    resetLastLoadedModule.call(this);
 }
 
 //重设最后的模块
 function resetLastLoadedModule() {
-	this.module.lastLoadedModule = {};
+    this.module.lastLoadedModule = {};
+}
+
+//运行插入模块
+function runCreateScript(loadModules) {
+    var _this5 = this;
+
+    fn.each(loadModules, function (path, index) {
+        _createScript.call(_this5, path);
+    });
+}
+
+//检测单前模块是否加载了
+function isCreateScript(path) {
+    var findM = findModule.call(this, path);
+    if (fn.isFn(findM.createScript)) {
+        return findM.createScript;
+    } else {
+        return false;
+    }
 }
 
 //路径处理
 function resolvePath(path) {
-	var resPath = [this.baseUrl],
-	    splitResPath = path.split('/');
+    var resPath = [this.baseUrl],
+        splitResPath = path.split('/');
 
-	fn.each(splitResPath, function (p, index) {
-		switch (p) {
-			case '':
-				if (index === 0) resPath[index] = '';
-				break;
-			case '.':
-				break;
-			case '..':
-				resPath.pop();
-				break;
-			default:
-				resPath.push(p);
-		}
-	});
-	return resPath.join('/');
+    fn.each(splitResPath, function (p, index) {
+        switch (p) {
+            case '':
+                if (index === 0) resPath[index] = '';
+                break;
+            case '.':
+                break;
+            case '..':
+                resPath.pop();
+                break;
+            default:
+                resPath.push(p);
+        }
+    });
+    return resPath.join('/');
 }
 
 //处理是否存在js后缀
 function resolveJsExt(url) {
-	if (/\.js/g.test(url)) return url;else return url + '.js';
+    if (/\.js/g.test(url)) return url;else return url + '.js';
 }
 
 //查找当前的模块是否在模块中存在
 function hasModule(m) {
-	var path = resolvePath.call(this, m),
-	    module = this.module;
-	if (module.pathModule[m] || module.idModule[m] || module.urlModule[path]) return true;
-	return false;
+    var path = resolvePath.call(this, m),
+        module = this.module;
+    if (module.pathModule[m] || module.idModule[m] || module.urlModule[path]) return true;
+    return false;
 }
 
 //查找对应的模块内容  权重：path > url > id
 function findModule(m) {
-	var module = this.module,
-	    path = resolvePath.call(this, m);
-	if (module.pathModule[m]) return module.pathModule[m];
-	if (module.urlModule[path]) return module.urlModule[path];
-	if (module.idModule[m]) return module.idModule[m];
-	return false;
+    var module = this.module,
+        path = resolvePath.call(this, m);
+    if (module.pathModule[m]) return module.pathModule[m];
+    if (module.urlModule[path]) return module.urlModule[path];
+    if (module.idModule[m]) return module.idModule[m];
+    return false;
 }
 
 /***/ }),
