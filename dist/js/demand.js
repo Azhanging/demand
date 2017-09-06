@@ -4,7 +4,7 @@
  * 			(c) 2016-2017 Blue
  * 			Released under the MIT License.
  * 			https://github.com/azhanging/demand
- * 			time:Tue Sep 05 2017 23:03:14 GMT+0800 (中国标准时间)
+ * 			time:Wed Sep 06 2017 14:45:57 GMT+0800 (中国标准时间)
  * 		
  */
 /******/ (function(modules) { // webpackBootstrap
@@ -72,7 +72,7 @@
 /******/ 	__webpack_require__.p = "/dist";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 4);
+/******/ 	return __webpack_require__(__webpack_require__.s = 5);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -99,7 +99,7 @@ var Fn = function () {
     _createClass(Fn, [{
         key: 'isArr',
         value: function isArr(array) {
-            return array instanceof Array || !!(array && array.length);
+            return array instanceof Array;
         }
     }, {
         key: 'isObj',
@@ -217,7 +217,7 @@ var fn = new _fn2.default();
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+	value: true
 });
 exports.default = demand;
 
@@ -225,184 +225,84 @@ var _fn = __webpack_require__(0);
 
 var _fn2 = _interopRequireDefault(_fn);
 
-var _set = __webpack_require__(3);
+var _set = __webpack_require__(4);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var fn = new _fn2.default();
 
 function demand(dep, cb) {
-    if (fn.isArr(dep)) {
-        fn.each(dep, function (name, index) {
-            demand.module.installedModules[name].createScript();
-        });
-    }
+	var _this = demand,
+	    module = _this.module;
+	//运行依赖
+	if (fn.isArr(dep)) {
+		fn.each(dep, function (name, index) {
+			if (!_set.hasModule.call(_this, name)) return;
+			var findM = _set.findModule.call(_this, name);
+			fn.cb(findM.createScript, _this);
+		});
+
+		//存储回调，等所有的模块加载完毕后调用
+		module.use.push(cb);
+	} else if (fn.isStr(dep)) {
+		//获取模块
+		return _set.findModule.call(_this, dep);
+	}
 }
 
 //获取根路径
 demand.origin = function () {
-    return location.origin || location.protocol + '//' + location.host;
+	return location.origin || location.protocol + '//' + location.host;
 }();
-
-//配置状态
-var configed = false;
 
 //配置
 demand.config = function (opts) {
-    //不能重新配置模块
-    if (configed) {
-        console.warn('不能重复配置模块！');
-        return;
-    }
-    //设置源路径
-    demand.baseUrl = opts.baseUrl ? opts.baseUrl : demand.origin;
-    //配置别名
-    demand.alias = fn.isObj(opts.alias) ? (0, _set.setAlias)(opts.alias) : {};
-    //设置paths
-    _set.setPaths.call(demand, opts.paths);
-    //单例配置
-    configed = true;
+	//设置源路径
+	this.baseUrl = opts.baseUrl ? opts.baseUrl : this.origin;
+	//配置别名
+	this.alias = fn.isObj(opts.alias) ? (0, _set.setAlias)(opts.alias) : {};
+	//设置paths
+	_set.setPaths.call(this, opts.paths);
 };
 
 //模块存储
 demand.module = {
-    installedModules: {},
-    use: []
+	pathModule: {},
+	idModule: {},
+	urlModule: {},
+	use: [],
+	lastLoadedModule: {}
 };
 
 //加载模块
 demand.define = function (id, dep, cb) {
-    //第一个参数为id名字
-    if (fn.isStr(id)) {}
+	var module = {};
+	//存在id的模块
+	if (fn.isStr(id)) {
+		module['id'] = id;
+		if (fn.isArr(dep)) {
+			module['dep'] = dep;
+			module['_export_'] = cb;
+		} else if (fn.isFn(dep)) {
+			module['dep'] = [];
+			module['_export_'] = dep;
+		}
+	} else if (fn.isArr(id)) {
+		module['id'] = null;
+		module['dep'] = id;
+		module['_export_'] = dep;
+	} else if (fn.isFn(id)) {
+		module['dep'] = module['id'] = null;
+		module['_export_'] = id;
+	} else {
+		throw 'error';
+	}
+	//设置到最后一个接
+	this.module.lastLoadedModule = module;
 };
 
 /***/ }),
 /* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.createScript = undefined;
-exports.setAlias = setAlias;
-exports.setPaths = setPaths;
-exports.resolvePath = resolvePath;
-exports.resolveJsExt = resolveJsExt;
-
-var _queue = __webpack_require__(5);
-
-var _queue2 = _interopRequireDefault(_queue);
-
-var _fn = __webpack_require__(0);
-
-var _fn2 = _interopRequireDefault(_fn);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/*
- * set，设置模块方法
- * */
-
-var fn = new _fn2.default();
-
-//alias的规则
-var ALIAS_PATH = /^@\S{1,}/;
-
-//设置别名路径
-function setAlias(alias) {
-    var aliasPath = {};
-    fn.each(alias, function (path, key) {
-        if (ALIAS_PATH.test(key)) {
-            aliasPath[key] = path;
-        }
-    });
-    return aliasPath;
-}
-
-//设置模块路径
-function setPaths(paths) {
-    var _this = this;
-
-    if (!fn.isObj(paths)) return;
-    fn.each(paths, function (path, name) {
-        var resPath = resolvePath.call(_this, path);
-        _this.module.installedModules[name] = {
-            isLoaded: false,
-            createScript: function createScript() {
-                _createScript(resPath, name);
-            }
-        };
-    });
-}
-
-//创建script节点
-function _createScript(url, name) {
-    var script = document.createElement('script');
-    script.async = true;
-    script.setAttribute('data-demand-model', name ? name : url);
-    script.src = resolveJsExt(url);
-    document.getElementsByTagName('head')[0].appendChild(script);
-}
-
-//路径处理
-exports.createScript = _createScript;
-function resolvePath(path) {
-    var resPath = [this.baseUrl],
-        splitResPath = path.split('/');
-
-    fn.each(splitResPath, function (p, index) {
-        switch (p) {
-            case '':
-            case '.':
-                break;
-            case '..':
-                resPath.pop();
-                break;
-            default:
-                resPath.push(p);
-        }
-    });
-    return resPath.join('/');
-}
-
-//处理是否存在js后缀
-function resolveJsExt(url) {
-    if (/\.js/g.test(url)) return url;else return url + '.js';
-}
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _demand = __webpack_require__(2);
-
-var _demand2 = _interopRequireDefault(_demand);
-
-var _compatibility = __webpack_require__(1);
-
-var _compatibility2 = _interopRequireDefault(_compatibility);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-//demand文件入口
-(function (global, factory) {
-    global ? global.demand = factory() : {};
-})(typeof window !== 'undefined' ? window : undefined, function () {
-
-    _demand2.default.version = "v1.0.0";
-
-    return _demand2.default;
-});
-//兼容性处理
-
-/***/ }),
-/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -443,6 +343,199 @@ var Queue = function () {
 }();
 
 exports.default = Queue;
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+exports.createScript = undefined;
+exports.setAlias = setAlias;
+exports.setPaths = setPaths;
+exports.setModule = setModule;
+exports.resolvePath = resolvePath;
+exports.resolveJsExt = resolveJsExt;
+exports.hasModule = hasModule;
+exports.findModule = findModule;
+
+var _queue = __webpack_require__(3);
+
+var _queue2 = _interopRequireDefault(_queue);
+
+var _fn = __webpack_require__(0);
+
+var _fn2 = _interopRequireDefault(_fn);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*
+ * set，设置模块方法
+ * */
+
+var fn = new _fn2.default();
+
+//alias的规则
+var ALIAS_PATH = /^@\S{1,}/;
+
+//设置别名路径
+function setAlias(alias) {
+	var aliasPath = {};
+	fn.each(alias, function (path, key) {
+		if (ALIAS_PATH.test(key)) {
+			aliasPath[key] = path;
+		}
+	});
+	return aliasPath;
+}
+
+//设置模块路径
+function setPaths(paths) {
+	var _this2 = this;
+
+	fn.each(paths, function (path, name) {
+
+		var demand = _this2,
+		    resPath = resolvePath.call(_this2, path),
+		    //处理完的路径
+		urlModules = _this2.module.urlModule,
+		    //通过url处理的模块
+		pathModules = _this2.module.pathModule; //通过config中path的模块
+
+		urlModules[resPath] = {
+			isLoaded: false,
+			createScript: function createScript() {
+				_createScript.call(demand, {
+					url: resPath,
+					name: name
+				});
+			}
+		};
+
+		//如果是从paths中配置的路径
+		if (fn.isStr(name)) {
+			pathModules[name] = urlModules[resPath];
+		}
+	});
+}
+
+//创建script节点
+function _createScript(opts) {
+	var _this = this,
+	    script = document.createElement('script');
+	//获取模块
+	opts.findM = findModule.call(this, opts.url);
+	script.async = true;
+	script.src = resolveJsExt(opts.url);
+	script.onload = function () {
+		setModule.call(_this, opts);
+		opts.findM.isLoaded = true;
+		delete opts.findM.createScript;
+	};
+	script.error = function () {};
+	document.getElementsByTagName('head')[0].appendChild(script);
+}
+
+//设置模块的信息
+exports.createScript = _createScript;
+function setModule(opts) {
+
+	var lastLoader = this.module.lastLoadedModule;
+
+	fn.each(lastLoader, function (module, type) {
+		opts.findM[type] = module;
+	});
+
+	//扶弱当前的模块中存在id的名，设置id的模块
+	if (lastLoader.id) {
+		this.module.idModule[lastLoader.id] = opts.findM;
+	}
+
+	//重设最后的模块
+	resetLastLoadedModule.call(this);
+}
+
+//重设最后的模块
+function resetLastLoadedModule() {
+	this.module.lastLoadedModule = {};
+}
+
+//路径处理
+function resolvePath(path) {
+	var resPath = [this.baseUrl],
+	    splitResPath = path.split('/');
+
+	fn.each(splitResPath, function (p, index) {
+		switch (p) {
+			case '':
+				if (index === 0) resPath[index] = '';
+				break;
+			case '.':
+				break;
+			case '..':
+				resPath.pop();
+				break;
+			default:
+				resPath.push(p);
+		}
+	});
+	return resPath.join('/');
+}
+
+//处理是否存在js后缀
+function resolveJsExt(url) {
+	if (/\.js/g.test(url)) return url;else return url + '.js';
+}
+
+//查找当前的模块是否在模块中存在
+function hasModule(m) {
+	var path = resolvePath.call(this, m),
+	    module = this.module;
+	if (module.pathModule[m] || module.idModule[m] || module.urlModule[path]) return true;
+	return false;
+}
+
+//查找对应的模块内容  权重：path > url > id
+function findModule(m) {
+	var module = this.module,
+	    path = resolvePath.call(this, m);
+	if (module.pathModule[m]) return module.pathModule[m];
+	if (module.urlModule[path]) return module.urlModule[path];
+	if (module.idModule[m]) return module.idModule[m];
+	return false;
+}
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _demand = __webpack_require__(2);
+
+var _demand2 = _interopRequireDefault(_demand);
+
+var _compatibility = __webpack_require__(1);
+
+var _compatibility2 = _interopRequireDefault(_compatibility);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+//demand文件入口
+(function (global, factory) {
+    global ? global.demand = factory() : {};
+})(typeof window !== 'undefined' ? window : undefined, function () {
+
+    _demand2.default.version = "v1.0.0";
+
+    return _demand2.default;
+});
+//兼容性处理
 
 /***/ })
 /******/ ]);

@@ -1,7 +1,7 @@
 //常用方法
 export default class Fn {
     isArr(array) {
-        return array instanceof Array || !!(array && array.length);
+        return array instanceof Array;
     }
 
     isObj(obj) {

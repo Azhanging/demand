@@ -4,11 +4,13 @@
 	<head>
 		<meta charset="UTF-8">
 		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
 	</head>
 
-	<body>
+	<body>		
 		<script src="./dist/js/demand.js" type="text/javascript" charset="utf-8"></script>
 		<script type="text/javascript">
+			
 			demand.config({
 				baseUrl:'/demand/module',
 				alias:{
@@ -17,69 +19,18 @@
 				},
 				paths:{
 					app:'./m1',
-					app2:'/m2/m3/m4/../../../m2'
+					app2:'./m2/m3/m4/../../../m2',
+					app3:'./m3'
 				}
 			});
 			
-			demand(['app','app2'],()=>{
-				
+			demand(['app','./m2/m3/m4/../../../m2','./m3'],function(){
+				console.log('use');
 			});
+			
+			console.log(demand.module);
 			
 		</script>
-		<!--<script type="text/javascript">
-			demand.define('name', ['/demand/src/js/modules/m3.js'], function(m3) {
-				function name() {
-					console.log('name module');
-				}
-				console.log('m3：' + m3.greater(2313215465798465465));
-				return name;
-			});
-
-			demand.use(function() {
-				demand('name')();
-			});
-
-			demand.config({
-				baseUrl: demand.origin + '/demand',
-				alias: {
-					'js': 'src/',
-					'js_1': 'src/',
-					'js_2': 'js/',
-					'modules': '/modules/'
-				},
-				paths: [
-					'@js/@js_2/modules/m1.js',
-					'@js/@js_2/modules/m1.js'
-				]
-			});
-
-			demand.use(function() {
-				var a = demand('@js/@js_2/modules/m1.js');
-				console.log(a(1111));
-				console.log(a(222222));
-				var m3 = demand('m3');
-				console.log(m3.greater(12121213));
-			});
-			
-		</script>
-		<script type="text/javascript">
-			
-			demand.loadModules([
-				'@js/@js_2/modules/m4.js'
-			]);
-			
-			setTimeout(()=>{
-				demand.use(function() {
-					var a = demand('@js/@js_2/modules/m1.js');
-					console.log(a(123456));
-					console.log(a(22));
-					var m3 = demand('m3');
-					console.log(m3.greater(123));
-					console.log(typeof demand('@js/@js_2/modules/m4.js'));
-					console.log(demand.modules.installedModules);
-				});
-			},1000);
-		</script>-->
 	</body>
 
 </html>
