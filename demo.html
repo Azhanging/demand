@@ -7,34 +7,58 @@
 		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
 	</head>
 
-	<body>		
+	<body>
 		<script src="./dist/js/demand.js" type="text/javascript" charset="utf-8"></script>
 		<script type="text/javascript">
-			
 			demand.config({
-				baseUrl:'/demand/module',
-				alias:{
-					'as':'./asas',
-					'@asas':'/asdasd'
+				baseUrl: '/module',
+				alias: {
+					'as': './asas',
+					'@asas': '/asdasd'
 				},
-				paths:{
-					app:'./m1',
-					app2:'./m2/m3/m4/../../../m2',
-					app3:'./m3'
+				paths: {
+					app0: './m0',
+					app: './m1',
+					app2: './m2/m3/m4/../../../m2',
+					app3: './m3',
+//					app4: './m6'	//error
 				}
 			});
 			
-			demand(['app','./m2/m3/m4/../../../m2'],function(app,m2){
-				console.log(app(),m2.a());
+			demand(()=>{
+				console.log('------');
+				demand('m1')();
+				console.log('------');
 			});
-			
-			setTimeout(()=>{				
-				demand(['./m3'],function(){
-					console.log('456');
+
+			//这里的入口必须为上面paths定义的入口
+			demand(['app0', 'app', './m3','app4'], (m0, app, m3) => {
+				m0();
+				app();
+				m3();
+			});
+
+			setTimeout(() => {
+				demand(['app0', 'app', './m3'], function(m0, app, m3) {
+					console.log('------');
+					m0();
+					console.log('------');
 				});
-			},1000)
+			}, 1000);
 			
+			//多次定义config
+			setTimeout(() => {				
+				demand.config({
+					baseUrl: '/module/moreConfig',
+					paths: {
+						md1: './md1'
+					}
+				});
 			
+				demand(['md1'],function(md1){
+					md1();
+				});
+			},3000);
 		</script>
 	</body>
 

@@ -1,6 +1,4 @@
-import Fn from './fn';
-
-const fn = new Fn();
+import fn from './fn';
 
 //兼容性IE8
 (function() {

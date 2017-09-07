@@ -4,7 +4,7 @@
  * 			(c) 2016-2017 Blue
  * 			Released under the MIT License.
  * 			https://github.com/azhanging/demand
- * 			time:Wed Sep 06 2017 22:16:54 GMT+0800 (中国标准时间)
+ * 			time:Thu Sep 07 2017 16:18:28 GMT+0800 (中国标准时间)
  * 		
  */
 /******/ (function(modules) { // webpackBootstrap
@@ -72,7 +72,7 @@
 /******/ 	__webpack_require__.p = "/dist";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 5);
+/******/ 	return __webpack_require__(__webpack_require__.s = 8);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -149,7 +149,7 @@ var Fn = function () {
     return Fn;
 }();
 
-exports.default = Fn;
+exports.default = new Fn();
 
 /***/ }),
 /* 1 */
@@ -158,56 +158,91 @@ exports.default = Fn;
 "use strict";
 
 
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+exports.hasModule = hasModule;
+exports.findModule = findModule;
+exports.setModule = setModule;
+
 var _fn = __webpack_require__(0);
 
 var _fn2 = _interopRequireDefault(_fn);
 
+var _init = __webpack_require__(3);
+
+var _path = __webpack_require__(2);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var fn = new _fn2.default();
+//查找当前的模块是否在模块中存在
 
-//兼容性IE8
-(function () {
+//初始化
+function hasModule(m) {
+	var path = _path.resolvePath.call(this, m),
+	    module = this.module;
+	if (module.pathModule[m] || module.idModule[m] || module.urlModule[path]) return true;
+	return false;
+}
 
-    //兼容IE8中 的indexOf
-    if (!fn.isFn(Array.prototype.indexOf)) {
-        Array.prototype.indexOf = function (val) {
-            var index = 0,
-                len = this.length;
-            for (; index < len; index++) {
-                if (this[index] === val) return index;
-            }
-            return -1;
-        };
-    }
+//查找对应的模块内容  权重：path > url > id
+function findModule(m) {
+	var module = this.module,
+	    path = _path.resolvePath.call(this, m);
+	if (module.pathModule[m]) return module.pathModule[m];
+	if (module.urlModule[path]) return module.urlModule[path];
+	if (module.idModule[m]) return module.idModule[m];
+	return false;
+}
 
-    //map
-    if (!fn.isFn(Array.prototype.map)) {
-        Array.prototype.map = function (fn) {
-            var mapArr = [],
-                i = 0,
-                len = this.length;
-            for (; i < len; i++) {
-                mapArr.push(fn(this[i], i));
-            }
-            return mapArr;
-        };
-    }
+//设置模块的信息
+function setModule(opts) {
 
-    //filter
-    if (!fn.isFn(Array.prototype.filter)) {
-        Array.prototype.filter = function (fn) {
-            var mapArr = [],
-                i = 0,
-                len = this.length;
-            for (; i < len; i++) {
-                var item = this[i];
-                if (fn(item, i)) mapArr.push(item);
-            }
-            return mapArr;
-        };
-    }
-})();
+	var lastLoader = this.module.lastLoadedModule,
+	    dep = lastLoader.dep;
+
+	//把最后加载的模块内容加载进去
+	_fn2.default.each(lastLoader, function (module, type) {
+		opts.findM[type] = module;
+	});
+
+	//扶弱当前的模块中存在id的名，设置id的模块
+	if (lastLoader.id) {
+		this.module.idModule[lastLoader.id] = opts.findM;
+	}
+
+	//查看依赖，设置一下依赖
+	if (dep.length > 0) {
+		var loadModules = _init.setPaths.call(this, dep);
+		runCreateScript.call(this, loadModules);
+	}
+
+	//设置初始化的状态
+	opts.findM.isDemand = false;
+
+	//运行模块内容，返回接口
+	this.module.depManage.unshift({
+		module: opts.findM,
+		dep: dep
+	});
+
+	//重设最后的模块
+	resetLastLoadedModule.call(this);
+}
+
+//重设最后的模块
+function resetLastLoadedModule() {
+	this.module.lastLoadedModule = {};
+}
+
+//运行插入模块
+function runCreateScript(loadModules) {
+	var _this = this;
+
+	_fn2.default.each(loadModules, function (path, index) {
+		createScript.call(_this, path);
+	});
+}
 
 /***/ }),
 /* 2 */
@@ -219,96 +254,131 @@ var fn = new _fn2.default();
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
-exports.default = demand;
+exports.resolvePath = resolvePath;
+exports.resolveJsExt = resolveJsExt;
 
 var _fn = __webpack_require__(0);
 
 var _fn2 = _interopRequireDefault(_fn);
 
-var _set = __webpack_require__(4);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var fn = new _fn2.default();
+//路径处理
+function resolvePath(path) {
+	var resPath = [this.baseUrl],
+	    splitResPath = path.split('/');
 
-function demand(dep, cb) {
-	var _this = demand,
-	    module = _this.module;
-	//运行依赖
-	if (fn.isArr(dep)) {
-		fn.each(dep, function (name, index) {
-			if (!_set.hasModule.call(_this, name)) return;
-			var findM = _set.findModule.call(_this, name);
-			fn.cb(findM.createScript, _this);
-		});
-
-		//存储回调，等所有的模块加载完毕后调用
-		module.use.push({
-			cb: cb,
-			dep: dep
-		});
-	} else if (fn.isStr(dep)) {
-		//获取模块
-		return _set.findModule.call(_this, dep)['_export_'];
-	}
+	_fn2.default.each(splitResPath, function (p, index) {
+		switch (p) {
+			case '':
+				if (index === 0) resPath[index] = '';
+				break;
+			case '.':
+				break;
+			case '..':
+				resPath.pop();
+				break;
+			default:
+				resPath.push(p);
+		}
+	});
+	return resPath.join('/');
 }
 
-//获取根路径
-demand.origin = function () {
-	return location.origin || location.protocol + '//' + location.host;
-}();
-
-//配置
-demand.config = function (opts) {
-	//设置源路径
-	this.baseUrl = opts.baseUrl ? opts.baseUrl : this.origin;
-	//配置别名
-	this.alias = fn.isObj(opts.alias) ? (0, _set.setAlias)(opts.alias) : {};
-	//设置paths
-	_set.setPaths.call(this, opts.paths);
-	//设置queue的回调
-	_set.setModuleQueue.call(this);
-};
-
-//模块存储
-demand.module = {
-	pathModule: {},
-	idModule: {},
-	urlModule: {},
-	use: [],
-	lastLoadedModule: {}
-};
-
-//加载模块
-demand.define = function (id, dep, cb) {
-	var module = {};
-	//存在id的模块
-	if (fn.isStr(id)) {
-		module['id'] = id;
-		if (fn.isArr(dep)) {
-			module['dep'] = dep;
-			module['_export_'] = cb;
-		} else if (fn.isFn(dep)) {
-			module['dep'] = [];
-			module['_export_'] = dep;
-		}
-	} else if (fn.isArr(id)) {
-		module['id'] = null;
-		module['dep'] = id;
-		module['_export_'] = dep;
-	} else if (fn.isFn(id)) {
-		module['id'] = null;
-		module['dep'] = [];
-		module['_export_'] = id;
-	} else {
-		throw 'error';
-	}
-	//设置到最后一个接
-	this.module.lastLoadedModule = module;
-};
+//处理是否存在js后缀
+function resolveJsExt(url) {
+	if (/\.js/g.test(url)) return url;else return url + '.js';
+}
 
 /***/ }),
 /* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+exports.setPaths = setPaths;
+exports.setAlias = setAlias;
+
+var _path = __webpack_require__(2);
+
+var _module = __webpack_require__(1);
+
+var _script = __webpack_require__(7);
+
+var _fn = __webpack_require__(0);
+
+var _fn2 = _interopRequireDefault(_fn);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+//alias的规则
+var ALIAS_PATH = /^@\S{1,}/;
+
+//设置模块路径
+function setPaths(paths) {
+	var _this = this;
+
+	var loadModules = [];
+
+	_fn2.default.each(paths, function (path, name) {
+
+		var demand = _this,
+		    resPath = _path.resolvePath.call(_this, path),
+		    //处理完的路径
+		urlModules = _this.module.urlModule,
+		    //通过url处理的模块
+		pathModules = _this.module.pathModule,
+		    //通过config中path的模块
+		pathConfig = {
+			url: resPath,
+			name: name
+		};
+
+		//检查是否存在对应的模块，存在跳过
+		if (_module.hasModule.call(_this, path)) {
+			var hasCreateScript = _script.isCreateScript.call(_this, path);
+			//当前的模块是否被加载script
+			if (hasCreateScript) {
+				hasCreateScript.call(_this);
+			}
+			return;
+		}
+
+		urlModules[resPath] = {
+			createScript: function createScript() {
+				_script.createScript.call(demand, pathConfig);
+			}
+		};
+
+		//如果是从paths中配置的路径
+		if (_fn2.default.isStr(name)) {
+			pathModules[name] = urlModules[resPath];
+		}
+
+		loadModules.push(pathConfig);
+	});
+
+	//返回处理完的模块路径
+	return loadModules;
+}
+
+//设置别名路径
+function setAlias(alias) {
+	var aliasPath = {};
+	_fn2.default.each(alias, function (path, key) {
+		if (ALIAS_PATH.test(key)) {
+			aliasPath[key] = path;
+		}
+	});
+	return aliasPath;
+}
+
+/***/ }),
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -352,288 +422,11 @@ var Queue = function () {
     return Queue;
 }();
 
-exports.default = Queue;
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.createScript = undefined;
-exports.setModuleQueue = setModuleQueue;
-exports.setAlias = setAlias;
-exports.setPaths = setPaths;
-exports.setModule = setModule;
-exports.resolvePath = resolvePath;
-exports.resolveJsExt = resolveJsExt;
-exports.hasModule = hasModule;
-exports.findModule = findModule;
-
-var _queue = __webpack_require__(3);
-
-var _queue2 = _interopRequireDefault(_queue);
-
-var _fn = __webpack_require__(0);
-
-var _fn2 = _interopRequireDefault(_fn);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/*
- * set，设置模块方法
- * */
-
-var fn = new _fn2.default();
-
-//alias的规则
-var ALIAS_PATH = /^@\S{1,}/;
 //创建队列
-var queue = new _queue2.default();
-//依赖管理
-var depManage = [];
 
-//设置回调
-function setModuleQueue() {
-    var _this = this;
 
-    queue.cb = function () {
-        fn.each(depManage, function (depData, index) {
-            buildModuleDep.call(_this, depData);
-        });
-
-        var cbDeps = [];
-
-        fn.each(_this.module.use, function (depData, index) {
-
-            fn.each(depData.dep, function (dep, index) {
-                cbDeps.push(_this(dep));
-            });
-
-            depData.cb.apply(_this, cbDeps);
-        });
-    };
-}
-
-//设置模块内的依赖
-function buildModuleDep(depData) {
-    var _this2 = this;
-
-    var module = depData.module,
-        deps = depData.dep,
-        demandDep = [];
-
-    fn.each(deps, function (dep) {
-
-        var findM = findModule.call(_this2, dep),
-            depExport = findM['_export_'];
-
-        if (!findM.isDemand) {
-            findM['_export_'] = new depExport();
-            findM.isDemand = true;
-        }
-
-        demandDep.push(findM['_export_']);
-    });
-
-    if (!module.isDemand) {
-
-        module._export_ = module._export_.apply(this, demandDep);
-
-        module.isDemand = true;
-    }
-}
-
-//设置别名路径
-function setAlias(alias) {
-    var aliasPath = {};
-    fn.each(alias, function (path, key) {
-        if (ALIAS_PATH.test(key)) {
-            aliasPath[key] = path;
-        }
-    });
-    return aliasPath;
-}
-
-//设置模块路径
-function setPaths(paths) {
-    var _this3 = this;
-
-    var loadModules = [];
-
-    fn.each(paths, function (path, name) {
-
-        var demand = _this3,
-            resPath = resolvePath.call(_this3, path),
-            //处理完的路径
-        urlModules = _this3.module.urlModule,
-            //通过url处理的模块
-        pathModules = _this3.module.pathModule,
-            //通过config中path的模块
-        pathConfig = {
-            url: resPath,
-            name: name
-        };
-
-        //检查是否存在对应的模块，存在跳过
-        if (hasModule.call(_this3, path)) {
-            var hasCreateScript = isCreateScript.call(_this3, path);
-            //当前的模块是否被加载script
-            if (hasCreateScript) {
-                hasCreateScript.call(_this3);
-            }
-            return;
-        }
-
-        urlModules[resPath] = {
-            createScript: function createScript() {
-                _createScript.call(demand, pathConfig);
-            }
-        };
-
-        //如果是从paths中配置的路径
-        if (fn.isStr(name)) {
-            pathModules[name] = urlModules[resPath];
-        }
-
-        loadModules.push(pathConfig);
-    });
-
-    //返回处理完的模块路径
-    return loadModules;
-}
-
-//创建script节点
-function _createScript(opts) {
-    var _this4 = this;
-
-    var script = document.createElement('script');
-    //获取模块
-    opts.findM = findModule.call(this, opts.url);
-    script.async = true;
-    script.src = resolveJsExt(opts.url);
-
-    script.onload = function () {
-        delete opts.findM.createScript;
-        setModule.call(_this4, opts);
-        queue.next();
-    };
-
-    script.error = function () {};
-
-    queue.push(false);
-
-    document.getElementsByTagName('head')[0].appendChild(script);
-}
-
-//设置模块的信息
-exports.createScript = _createScript;
-function setModule(opts) {
-
-    var lastLoader = this.module.lastLoadedModule,
-        dep = lastLoader.dep;
-
-    //把最后加载的模块内容加载进去
-    fn.each(lastLoader, function (module, type) {
-        opts.findM[type] = module;
-    });
-
-    //扶弱当前的模块中存在id的名，设置id的模块
-    if (lastLoader.id) {
-        this.module.idModule[lastLoader.id] = opts.findM;
-    }
-
-    //查看依赖，设置一下依赖
-    if (dep.length > 0) {
-        var loadModules = setPaths.call(this, dep);
-        runCreateScript.call(this, loadModules);
-    }
-
-    //设置初始化的状态
-    opts.findM.isDemand = false;
-
-    //运行模块内容，返回接口
-    depManage.unshift({
-        module: opts.findM,
-        dep: dep
-    });
-
-    //重设最后的模块
-    resetLastLoadedModule.call(this);
-}
-
-//重设最后的模块
-function resetLastLoadedModule() {
-    this.module.lastLoadedModule = {};
-}
-
-//运行插入模块
-function runCreateScript(loadModules) {
-    var _this5 = this;
-
-    fn.each(loadModules, function (path, index) {
-        _createScript.call(_this5, path);
-    });
-}
-
-//检测单前模块是否加载了
-function isCreateScript(path) {
-    var findM = findModule.call(this, path);
-    if (fn.isFn(findM.createScript)) {
-        return findM.createScript;
-    } else {
-        return false;
-    }
-}
-
-//路径处理
-function resolvePath(path) {
-    var resPath = [this.baseUrl],
-        splitResPath = path.split('/');
-
-    fn.each(splitResPath, function (p, index) {
-        switch (p) {
-            case '':
-                if (index === 0) resPath[index] = '';
-                break;
-            case '.':
-                break;
-            case '..':
-                resPath.pop();
-                break;
-            default:
-                resPath.push(p);
-        }
-    });
-    return resPath.join('/');
-}
-
-//处理是否存在js后缀
-function resolveJsExt(url) {
-    if (/\.js/g.test(url)) return url;else return url + '.js';
-}
-
-//查找当前的模块是否在模块中存在
-function hasModule(m) {
-    var path = resolvePath.call(this, m),
-        module = this.module;
-    if (module.pathModule[m] || module.idModule[m] || module.urlModule[path]) return true;
-    return false;
-}
-
-//查找对应的模块内容  权重：path > url > id
-function findModule(m) {
-    var module = this.module,
-        path = resolvePath.call(this, m);
-    if (module.pathModule[m]) return module.pathModule[m];
-    if (module.urlModule[path]) return module.urlModule[path];
-    if (module.idModule[m]) return module.idModule[m];
-    return false;
-}
+exports.default = Queue;
+var queue = exports.queue = new Queue();
 
 /***/ }),
 /* 5 */
@@ -642,11 +435,244 @@ function findModule(m) {
 "use strict";
 
 
-var _demand = __webpack_require__(2);
+var _fn = __webpack_require__(0);
+
+var _fn2 = _interopRequireDefault(_fn);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+//兼容性IE8
+(function () {
+
+    //兼容IE8中 的indexOf
+    if (!_fn2.default.isFn(Array.prototype.indexOf)) {
+        Array.prototype.indexOf = function (val) {
+            var index = 0,
+                len = this.length;
+            for (; index < len; index++) {
+                if (this[index] === val) return index;
+            }
+            return -1;
+        };
+    }
+
+    //map
+    if (!_fn2.default.isFn(Array.prototype.map)) {
+        Array.prototype.map = function (fn) {
+            var mapArr = [],
+                i = 0,
+                len = this.length;
+            for (; i < len; i++) {
+                mapArr.push(fn(this[i], i));
+            }
+            return mapArr;
+        };
+    }
+
+    //filter
+    if (!_fn2.default.isFn(Array.prototype.filter)) {
+        Array.prototype.filter = function (fn) {
+            var mapArr = [],
+                i = 0,
+                len = this.length;
+            for (; i < len; i++) {
+                var item = this[i];
+                if (fn(item, i)) mapArr.push(item);
+            }
+            return mapArr;
+        };
+    }
+})();
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+exports.default = demand;
+
+var _module = __webpack_require__(1);
+
+var _use = __webpack_require__(10);
+
+var _init = __webpack_require__(3);
+
+var _fn = __webpack_require__(0);
+
+var _fn2 = _interopRequireDefault(_fn);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+//初始化
+function demand(dep, cb) {
+	var _this = demand,
+	    module = _this.module;
+	//运行依赖
+	if (_fn2.default.isArr(dep)) {
+		_fn2.default.each(dep, function (name, index) {
+			if (!_module.hasModule.call(_this, name)) return;
+			var findM = _module.findModule.call(_this, name);
+			_fn2.default.cb(findM.createScript, _this);
+		});
+
+		//存储回调，等所有的模块加载完毕后调用
+		module.use.push({
+			dep: dep,
+			cb: cb
+		});
+		module.status ? _use.runUse.call(_this) : null;
+	} else if (_fn2.default.isFn(dep)) {
+		//使用情况全部的	
+		module.use.push({
+			dep: [],
+			cb: dep
+		});
+
+		module.status ? _use.runUse.call(_this) : null;
+	} else if (_fn2.default.isStr(dep)) {
+		//获取模块
+		return _module.findModule.call(_this, dep)['_export_'];
+	}
+}
+
+//获取根路径
+demand.origin = function () {
+	return location.origin || location.protocol + '//' + location.host;
+}();
+
+//配置
+demand.config = function (opts) {
+	//设置源路径
+	this.baseUrl = opts.baseUrl ? opts.baseUrl : this.origin;
+	//配置别名
+	this.alias = _fn2.default.isObj(opts.alias) ? (0, _init.setAlias)(opts.alias) : {};
+	//设置paths
+	_init.setPaths.call(this, opts.paths);
+	//设置queue的回调
+	_use.useQueue.call(this);
+	//存在多个config，重新配置status状态	
+	this.module.status = false;
+};
+
+//模块存储
+demand.module = {
+	pathModule: {}, //config中的path模块
+	idModule: {}, //id模块
+	urlModule: {}, //url路径的模块
+	use: [], //use集合
+	lastLoadedModule: {}, //最后获取到的模块
+	depManage: [], //依赖管理
+	status: false //全部的use加载状态
+};
+
+//加载模块
+demand.define = function (id, dep, cb) {
+	var module = {};
+	//存在id的模块
+	if (_fn2.default.isStr(id)) {
+		module['id'] = id;
+		if (_fn2.default.isArr(dep)) {
+			module['dep'] = dep;
+			module['_export_'] = cb;
+		} else if (_fn2.default.isFn(dep)) {
+			module['dep'] = [];
+			module['_export_'] = dep;
+		}
+	} else if (_fn2.default.isArr(id)) {
+		module['id'] = null;
+		module['dep'] = id;
+		module['_export_'] = dep;
+	} else if (_fn2.default.isFn(id)) {
+		module['id'] = null;
+		module['dep'] = [];
+		module['_export_'] = id;
+	} else {
+		throw 'error';
+	}
+	//设置到最后一个接
+	this.module.lastLoadedModule = module;
+};
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+exports.createScript = createScript;
+exports.isCreateScript = isCreateScript;
+
+var _module = __webpack_require__(1);
+
+var _path = __webpack_require__(2);
+
+var _queue = __webpack_require__(4);
+
+var _fn = __webpack_require__(0);
+
+var _fn2 = _interopRequireDefault(_fn);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+//创建script节点
+function createScript(opts) {
+	var _this = this;
+
+	var script = document.createElement('script');
+	//获取模块
+	opts.findM = _module.findModule.call(this, opts.url);
+	script.async = true;
+
+	script.onload = function () {
+		delete opts.findM.createScript;
+		_module.setModule.call(_this, opts);
+		_queue.queue.next();
+	};
+
+	script.error = function () {
+		throw '加载模块出错！';
+	};
+
+	script.type = "text/javascript";
+
+	script.src = (0, _path.resolveJsExt)(opts.url);
+
+	_queue.queue.push(false);
+
+	document.getElementsByTagName('head')[0].appendChild(script);
+}
+
+//检测单前模块script是否加载了
+function isCreateScript(path) {
+	var findM = _module.findModule.call(this, path);
+	if (_fn2.default.isFn(findM.createScript)) {
+		return findM.createScript;
+	} else {
+		return false;
+	}
+}
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _demand = __webpack_require__(6);
 
 var _demand2 = _interopRequireDefault(_demand);
 
-var _compatibility = __webpack_require__(1);
+var _compatibility = __webpack_require__(5);
 
 var _compatibility2 = _interopRequireDefault(_compatibility);
 
@@ -662,6 +688,112 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
     return _demand2.default;
 });
 //兼容性处理
+
+/***/ }),
+/* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+exports.buildModuleDep = buildModuleDep;
+
+var _fn = __webpack_require__(0);
+
+var _fn2 = _interopRequireDefault(_fn);
+
+var _module = __webpack_require__(1);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/*
+ *	设置模块内的依赖depData 
+ * 	{
+ * 		dep:[dep1,dep2],
+ * 		module:module
+ * 	}
+ * */
+function buildModuleDep(depData) {
+	var _this = this;
+
+	var module = depData.module,
+	    deps = depData.dep,
+	    demandDep = [];
+
+	_fn2.default.each(deps, function (dep) {
+		var findM = _module.findModule.call(_this, dep),
+		    depExport = findM._export_;
+		if (!findM.isDemand) {
+			findM._export_ = new depExport();
+			findM.isDemand = true;
+		}
+		demandDep.push(findM._export_);
+	});
+
+	if (!module.isDemand) {
+		module._export_ = module._export_.apply(this, demandDep);
+		module.isDemand = true;
+	}
+}
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+exports.useQueue = useQueue;
+exports.runUse = runUse;
+
+var _dep = __webpack_require__(9);
+
+var _queue = __webpack_require__(4);
+
+var _fn = __webpack_require__(0);
+
+var _fn2 = _interopRequireDefault(_fn);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+//设置模块的依赖队列和use中的cb
+function useQueue() {
+	var _this = this;
+
+	_queue.queue.cb = function () {
+		var module = _this.module;
+		//设置dep的依赖
+		while (module.depManage.length !== 0) {
+			var depData = module.depManage.shift();
+			_dep.buildModuleDep.call(_this, depData);
+		}
+		//处理use
+		runUse.call(_this);
+		//第一次所有的
+		module.status = true;
+	};
+}
+
+//运行依赖
+function runUse() {
+	var _this2 = this;
+
+	var module = this.module,
+	    cbDeps = [];
+	while (module.use.length !== 0) {
+		var depData = module.use.shift();
+		_fn2.default.each(depData.dep, function (dep, index) {
+			cbDeps.push(_this2(dep));
+		});
+		depData.cb.apply(this, cbDeps);
+	}
+}
 
 /***/ })
 /******/ ]);

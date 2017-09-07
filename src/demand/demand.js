@@ -1,14 +1,11 @@
-import Fn from './fn';
+import { hasModule, findModule } from './module';
 
-import {
-	setAlias,
-	setPaths,
-	setModuleQueue,
-	hasModule,
-	findModule
-} from './set';
+import { useQueue, checkRunUse, runUse } from './use';
 
-const fn = new Fn();
+//初始化
+import { setAlias, setPaths } from './init';
+
+import fn from './fn';
 
 export default function demand(dep, cb) {
 	const _this = demand,
@@ -23,12 +20,23 @@ export default function demand(dep, cb) {
 
 		//存储回调，等所有的模块加载完毕后调用
 		module.use.push({
-		   cb:cb,
-		   dep:dep
+			dep: dep,
+			cb: cb
 		});
+		module.status ? runUse.call(_this) : null;
+
+	} else if(fn.isFn(dep)) {
+		//使用情况全部的	
+		module.use.push({
+			dep: [],
+			cb: dep
+		});
+
+		module.status ? runUse.call(_this) : null;
+
 	} else if(fn.isStr(dep)) {
 		//获取模块
-		return findModule.call(_this,dep)['_export_'];
+		return findModule.call(_this, dep)['_export_'];
 	}
 }
 
@@ -46,16 +54,20 @@ demand.config = function(opts) {
 	//设置paths
 	setPaths.call(this, opts.paths);
 	//设置queue的回调
-	setModuleQueue.call(this);
+	useQueue.call(this);
+	//存在多个config，重新配置status状态	
+	this.module.status = false;
 };
 
 //模块存储
 demand.module = {
-	pathModule: {},
-	idModule: {},
-	urlModule: {},
-	use: [],
-	lastLoadedModule: {}
+	pathModule: {}, //config中的path模块
+	idModule: {}, //id模块
+	urlModule: {}, //url路径的模块
+	use: [], //use集合
+	lastLoadedModule: {}, //最后获取到的模块
+	depManage: [], //依赖管理
+	status: false //全部的use加载状态
 };
 
 //加载模块
@@ -76,7 +88,7 @@ demand.define = function(id, dep, cb) {
 		module['dep'] = id;
 		module['_export_'] = dep;
 	} else if(fn.isFn(id)) {
-	    module['id'] = null;
+		module['id'] = null;
 		module['dep'] = [];
 		module['_export_'] = id;
 	} else {

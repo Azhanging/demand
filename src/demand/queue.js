@@ -17,3 +17,7 @@ export default class Queue {
         if(this.queue.length === 0) this.cb();
     }
 }
+
+//创建队列
+export const queue = new Queue();
+

@@ -1,5 +1,5 @@
 //常用方法
-export default class Fn {
+class Fn {
     isArr(array) {
         return array instanceof Array;
     }
@@ -35,3 +35,5 @@ export default class Fn {
         this.isFn(cb) ? (cb.apply(context, args)) : null;
     }
 }
+
+export default new Fn();

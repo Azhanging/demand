@@ -12,6 +12,7 @@
   "author": "Blue",
   "license": "ISC",
   "devDependencies": {
+    "axios": "^0.16.2",
     "babel-core": "^6.22.1",
     "babel-loader": "^6.2.10",
     "babel-plugin-transform-runtime": "^6.22.0",
