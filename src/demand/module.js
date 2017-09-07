@@ -4,6 +4,8 @@ import { setPaths } from './init';
 
 import { resolvePath } from './path';
 
+import { runCreateScript } from './script';
+
 //查找当前的模块是否在模块中存在
 export function hasModule(m) {
 	const path = resolvePath.call(this, m),
@@ -28,8 +30,15 @@ export function findModule(m) {
 //设置模块的信息
 export function setModule(opts) {
 
-	const lastLoader = this.module.lastLoadedModule,
-		dep = lastLoader.dep;
+	const lastLoader = this.module.lastLoadedModule;
+	
+	let	dep = lastLoader.dep;
+		
+	//http(s)模块不存在这种规范，不会出现dep依赖和_export_接口；
+	if(fn.isEmptyObj(lastLoader)){
+	    dep = [];
+	    opts.findM._export_ = function(){};
+	}
 
 	//把最后加载的模块内容加载进去
 	fn.each(lastLoader, (module, type) => {
@@ -63,11 +72,4 @@ export function setModule(opts) {
 //重设最后的模块
 function resetLastLoadedModule() {
 	this.module.lastLoadedModule = {};
-}
-
-//运行插入模块
-function runCreateScript(loadModules) {
-	fn.each(loadModules, (path, index) => {
-		createScript.call(this, path);
-	});
 }

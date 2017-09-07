@@ -7,6 +7,11 @@ class Fn {
     isObj(obj) {
         return obj instanceof Object && !(obj instanceof Array) && obj !== null;
     }
+    
+    isEmptyObj(obj) {
+        for (let t in obj) return false;  
+        return true;
+    }  
 
     isFn(fn) {
         return typeof fn === 'function';

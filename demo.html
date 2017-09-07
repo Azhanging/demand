@@ -21,18 +21,18 @@
 					app: './m1',
 					app2: './m2/m3/m4/../../../m2',
 					app3: './m3',
-//					app4: './m6'	//error
+					//					app4: './m6'	//error
 				}
 			});
-			
-			demand(()=>{
+
+			demand(() => {
 				console.log('------');
 				demand('m1')();
 				console.log('------');
 			});
 
 			//这里的入口必须为上面paths定义的入口
-			demand(['app0', 'app', './m3','app4'], (m0, app, m3) => {
+			demand(['app0', 'app', './m3', 'app4'], (m0, app, m3) => {
 				m0();
 				app();
 				m3();
@@ -45,20 +45,18 @@
 					console.log('------');
 				});
 			}, 1000);
-			
+
 			//多次定义config
-			setTimeout(() => {				
-				demand.config({
-					baseUrl: '/module/moreConfig',
-					paths: {
-						md1: './md1'
-					}
+			setTimeout(() => {
+				demand.loadModule({
+					md1: './load-module/md1',
+					jq:'http://libs.baidu.com/jquery/2.0.0/jquery.min.js'
 				});
-			
-				demand(['md1'],function(md1){
+
+				demand(['md1','jq'], function(md1) {
 					md1();
 				});
-			},3000);
+			}, 3000);
 		</script>
 	</body>
 
