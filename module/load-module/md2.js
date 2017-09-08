@@ -1,4 +1,4 @@
-demand.define(['./load-module/md2','m2'],function(md2,m2){
+demand.define(['./m2'],function(m2){
 	return function (){
 		console.log('md2');
 	}

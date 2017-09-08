@@ -1,8 +1,6 @@
-demand.define(['./m2'],function(m2){
+demand.define(['app'],function(m1){
 	return function(){
-	    m2.a();
-	    var m2m = demand('idName1');
-	    m2m.a();
+		m1();
 	}
 });
 

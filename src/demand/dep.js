@@ -2,6 +2,8 @@ import fn from './fn';
 
 import { findModule } from './module';
 
+import error from './error';
+
 /*
  *	设置模块内的依赖depData 
  * 	{
@@ -17,11 +19,18 @@ export function buildModuleDep(depData) {
 	fn.each(deps, (dep) => {
 		const findM = findModule.call(this, dep),
 			depExport = findM._export_;
-		if(!findM.isDemand) {
-			findM._export_ = new depExport();
-			findM.isDemand = true;
+
+		//是否存在自己依赖自己
+		if(module === findM) {
+			error(2);
+			demandDep.push(undefined);
+		} else {
+			if(findM && !findM.isDemand) {
+				findM._export_ = new depExport();
+				findM.isDemand = true;
+			}
+			demandDep.push(findM._export_);
 		}
-		demandDep.push(findM._export_);
 	});
 
 	if(!module.isDemand) {

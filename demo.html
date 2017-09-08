@@ -5,6 +5,7 @@
 		<meta charset="UTF-8">
 		<title></title>
 		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 	</head>
 
 	<body>
@@ -13,26 +14,31 @@
 			demand.config({
 				baseUrl: '/module',
 				alias: {
-					'as': './asas',
-					'@asas': '/asdasd'
+					'@alias0': './alias0',
+					'@alias1': '/alias1'
+				},
+				shim: { //定义demand中的模块规则
+					'$': {
+						dep: ['https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js'],
+						_export_: 'jQuery'
+					}
 				},
 				paths: {
 					app0: './m0',
 					app: './m1',
 					app2: './m2/m3/m4/../../../m2',
-					app3: './m3',
-					//					app4: './m6'	//error
+					app3: './m3'
 				}
 			});
 
 			demand(() => {
-				console.log('------');
+				console.log('--- m1 ---');
 				demand('m1')();
-				console.log('------');
+				console.log('---m1 end---');
 			});
 
 			//这里的入口必须为上面paths定义的入口
-			demand(['app0', 'app', './m3', 'app4'], (m0, app, m3) => {
+			demand(['app2', 'app0', 'app', './m3', 'app4'], (app2, m0, app, m3) => {
 				m0();
 				app();
 				m3();
@@ -40,20 +46,32 @@
 
 			setTimeout(() => {
 				demand(['app0', 'app', './m3'], function(m0, app, m3) {
-					console.log('------');
+					console.log('---m0---');
 					m0();
-					console.log('------');
+					console.log('---m0 end---');
 				});
 			}, 1000);
 
-			//多次定义config
+			demand.loadModule({
+				md1: './load-module/md1',
+				md2: './md2.error'
+			});
+
+			demand(['md1', 'md2'], function(md1, md2Err) {
+				console.log('---load module---');
+				md1();
+				md2Err();
+				console.log('---load module end---');
+			})
+
 			setTimeout(() => {
+
 				demand.loadModule({
 					md1: './load-module/md1',
-					jq:'http://libs.baidu.com/jquery/2.0.0/jquery.min.js'
+					md2err: './md2.error'
 				});
 
-				demand(['md1','jq'], function(md1) {
+				demand(['md1', 'md2err'], function(md1) {
 					md1();
 				});
 			}, 3000);

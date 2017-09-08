@@ -1,12 +1,12 @@
 import { resolvePath } from './path';
 
-import { hasModule } from './module';
+import { hasModule, findModule } from './module';
 
 import { createScript, isCreateScript } from './script';
 
 import fn from './fn';
 
-//alias的规则
+//设置alias的规则
 const ALIAS_PATH = /^@\S{1,}/;
 
 //设置模块路径

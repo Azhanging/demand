@@ -27,18 +27,18 @@ export function findModule(m) {
 	return false;
 }
 
+//删除无用的模块
+export function removeModule(opts){
+	delete this.module.urlModule[opts.url];
+	delete this.module.pathModule[opts.name];
+}
+
 //设置模块的信息
 export function setModule(opts) {
 
 	const lastLoader = this.module.lastLoadedModule;
-	
-	let	dep = lastLoader.dep;
-		
-	//http(s)模块不存在这种规范，不会出现dep依赖和_export_接口；
-	if(fn.isEmptyObj(lastLoader)){
-	    dep = [];
-	    opts.findM._export_ = function(){};
-	}
+
+	let dep = lastLoader.dep;
 
 	//把最后加载的模块内容加载进去
 	fn.each(lastLoader, (module, type) => {
@@ -69,7 +69,11 @@ export function setModule(opts) {
 	resetLastLoadedModule.call(this);
 }
 
-//重设最后的模块
+//重设最后的模块,在http模块中会存在不同规格的内容，需要设置一个空的规格
 function resetLastLoadedModule() {
-	this.module.lastLoadedModule = {};
+	this.module.lastLoadedModule = {
+		_export_() {},
+		dep: [],
+		id: null
+	};
 }
