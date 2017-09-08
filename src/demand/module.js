@@ -6,7 +6,7 @@ import { resolvePath } from './path';
 
 import { runCreateScript } from './script';
 
-//查找当前的模块是否在模块中存在
+//has module in demand
 export function hasModule(m) {
 	const path = resolvePath.call(this, m),
 		module = this.module;
@@ -17,7 +17,7 @@ export function hasModule(m) {
 	return false;
 }
 
-//查找对应的模块内容  权重：path > url > id
+//find module in demand.module[path|url|id]  权重：path > url > id
 export function findModule(m) {
 	const module = this.module,
 		path = resolvePath.call(this, m);
@@ -27,13 +27,13 @@ export function findModule(m) {
 	return false;
 }
 
-//删除无用的模块
+//del error module
 export function removeModule(opts){
 	delete this.module.urlModule[opts.url];
 	delete this.module.pathModule[opts.name];
 }
 
-//设置模块的信息
+//set module config
 export function setModule(opts) {
 
 	const lastLoader = this.module.lastLoadedModule;
@@ -60,10 +60,7 @@ export function setModule(opts) {
 	opts.findM.isDemand = false;
 
 	//运行模块内容，返回接口
-	this.module.depManage.unshift({
-		module: opts.findM,
-		dep: dep
-	});
+	this.module.depManage.unshift(opts.findM);
 
 	//重设最后的模块
 	resetLastLoadedModule.call(this);

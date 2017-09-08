@@ -14,6 +14,6 @@ export default function error(errCode, msg) {
 			console.error('模块使用有误，不能当前模块依赖于自身！');
 			break;
 		default:
-			console.error('模块问题导致错误信息：' + msg);
+			console.error('模块运行有误：' + msg);
 	}
 }

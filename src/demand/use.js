@@ -12,8 +12,8 @@ export function useQueue() {
 		const module = this.module;
 		//设置dep的依赖
 		while(module.depManage.length !== 0) {
-			const depData = module.depManage.shift();
-			buildModuleDep.call(this, depData);
+			const _module = module.depManage.shift();
+			buildModuleDep.call(this, _module);
 		}
 		//处理use
 		runUse.call(this);

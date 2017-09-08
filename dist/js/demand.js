@@ -4,7 +4,7 @@
  * 			(c) 2016-2017 Blue
  * 			Released under the MIT License.
  * 			https://github.com/azhanging/demand
- * 			time:Fri Sep 08 2017 20:28:22 GMT+0800 (中国标准时间)
+ * 			time:Fri Sep 08 2017 22:32:38 GMT+0800 (中国标准时间)
  * 		
  */
 /******/ (function(modules) { // webpackBootstrap
@@ -189,7 +189,7 @@ var _script = __webpack_require__(6);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-//查找当前的模块是否在模块中存在
+//has module in demand
 function hasModule(m) {
 	var path = _path.resolvePath.call(this, m),
 	    module = this.module;
@@ -197,7 +197,7 @@ function hasModule(m) {
 	return false;
 }
 
-//查找对应的模块内容  权重：path > url > id
+//find module in demand.module[path|url|id]  权重：path > url > id
 
 //初始化
 function findModule(m) {
@@ -209,13 +209,13 @@ function findModule(m) {
 	return false;
 }
 
-//删除无用的模块
+//del error module
 function removeModule(opts) {
 	delete this.module.urlModule[opts.url];
 	delete this.module.pathModule[opts.name];
 }
 
-//设置模块的信息
+//set module config
 function setModule(opts) {
 
 	var lastLoader = this.module.lastLoadedModule;
@@ -242,10 +242,7 @@ function setModule(opts) {
 	opts.findM.isDemand = false;
 
 	//运行模块内容，返回接口
-	this.module.depManage.unshift({
-		module: opts.findM,
-		dep: dep
-	});
+	this.module.depManage.unshift(opts.findM);
 
 	//重设最后的模块
 	resetLastLoadedModule.call(this);
@@ -288,7 +285,7 @@ function error(errCode, msg) {
 			console.error('模块使用有误，不能当前模块依赖于自身！');
 			break;
 		default:
-			console.error('模块问题导致错误信息：' + msg);
+			console.error('模块运行有误：' + msg);
 	}
 }
 
@@ -828,30 +825,30 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  * 		module:module
  * 	}
  * */
-function buildModuleDep(depData) {
+function buildModuleDep(module) {
 	var _this = this;
 
-	var module = depData.module,
-	    deps = depData.dep,
+	var deps = module.dep,
 	    demandDep = [];
 
+	//初始化模块依赖
 	_fn2.default.each(deps, function (dep) {
+
 		var findM = _module.findModule.call(_this, dep),
 		    depExport = findM._export_;
 
-		//是否存在自己依赖自己
+		//自己依赖自己的话，返回undefin
 		if (module === findM) {
-			(0, _error2.default)(2);
 			demandDep.push(undefined);
 		} else {
 			if (findM && !findM.isDemand) {
-				findM._export_ = new depExport();
-				findM.isDemand = true;
+				buildModuleDep.call(_this, findM);
 			}
 			demandDep.push(findM._export_);
 		}
 	});
 
+	//初始化模块接口
 	if (!module.isDemand) {
 		module._export_ = module._export_.apply(this, demandDep);
 		module.isDemand = true;
@@ -945,8 +942,8 @@ function useQueue() {
 		var module = _this.module;
 		//设置dep的依赖
 		while (module.depManage.length !== 0) {
-			var depData = module.depManage.shift();
-			_dep.buildModuleDep.call(_this, depData);
+			var _module = module.depManage.shift();
+			_dep.buildModuleDep.call(_this, _module);
 		}
 		//处理use
 		runUse.call(_this);
