@@ -4,7 +4,7 @@
  * 			(c) 2016-2017 Blue
  * 			Released under the MIT License.
  * 			https://github.com/azhanging/demand
- * 			time:Fri Sep 08 2017 22:32:38 GMT+0800 (中国标准时间)
+ * 			time:Sat Sep 09 2017 11:21:42 GMT+0800 (中国标准时间)
  * 		
  */
 /******/ (function(modules) { // webpackBootstrap
@@ -242,7 +242,7 @@ function setModule(opts) {
 	opts.findM.isDemand = false;
 
 	//运行模块内容，返回接口
-	this.module.depManage.unshift(opts.findM);
+	this.module.depManage.push(opts.findM);
 
 	//重设最后的模块
 	resetLastLoadedModule.call(this);
@@ -666,7 +666,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 exports.default = demand;
 
-var _module = __webpack_require__(1);
+var _module2 = __webpack_require__(1);
 
 var _use = __webpack_require__(11);
 
@@ -690,8 +690,8 @@ function demand(dep, cb) {
 	//运行依赖
 	if (_fn2.default.isArr(dep)) {
 		_fn2.default.each(dep, function (name, index) {
-			if (!_module.hasModule.call(_this, name)) return;
-			var findM = _module.findModule.call(_this, name);
+			if (!_module2.hasModule.call(_this, name)) return;
+			var findM = _module2.findModule.call(_this, name);
 			_fn2.default.cb(findM.createScript, _this);
 		});
 
@@ -714,8 +714,11 @@ function demand(dep, cb) {
 
 		module.status ? _use.runUse.call(_this) : null;
 	} else if (_fn2.default.isStr(dep)) {
+
 		//获取模块
-		return _module.findModule.call(_this, dep)['_export_'];
+		var _module = _module2.findModule.call(_this, dep);
+		//这理由循环依赖的问题，如果当前的模块是未加载的，直接返回undefined
+		return _module.isDemand ? _module['_export_'] : undefined;
 	}
 }
 
@@ -724,6 +727,7 @@ demand.origin = function () {
 	return location.origin || location.protocol + '//' + location.host;
 }();
 
+//是否config过
 var isConfig = false;
 
 //配置
@@ -763,6 +767,7 @@ demand.module = {
 	use: [], //use集合
 	lastLoadedModule: {}, //最后获取到的模块
 	depManage: [], //依赖管理
+	depQueue: [], //依赖队列
 	status: false //全部的use加载状态
 };
 
@@ -825,26 +830,37 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  * 		module:module
  * 	}
  * */
+
 function buildModuleDep(module) {
 	var _this = this;
 
 	var deps = module.dep,
 	    demandDep = [];
 
+	module.build = true;
+
 	//初始化模块依赖
 	_fn2.default.each(deps, function (dep) {
-
 		var findM = _module.findModule.call(_this, dep),
 		    depExport = findM._export_;
 
-		//自己依赖自己的话，返回undefin
+		//自己依赖自己的话，返回undefined
 		if (module === findM) {
 			demandDep.push(undefined);
 		} else {
-			if (findM && !findM.isDemand) {
+			/*
+    *	有关循环依赖的问题问题
+    * */
+
+			if (findM && !findM.build) {
 				buildModuleDep.call(_this, findM);
 			}
-			demandDep.push(findM._export_);
+
+			if (!findM.isDemand) {
+				demandDep.push(undefined);
+			} else {
+				demandDep.push(findM._export_);
+			}
 		}
 	});
 

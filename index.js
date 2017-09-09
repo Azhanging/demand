@@ -16,14 +16,14 @@ const server = http.createServer((req, res) => {
 		}
 		
 		if(/\.js/.test(req.url)){
-			res.setHeader('Content-Type','application/javascript');		
+			res.setHeader('Content-Type','application/javascript');
 		}
 		
-		if(/m1/.test(req.url)){	
+		if(/m1|m2/.test(req.url)){	
 			setTimeout(()=>{
 				res.write(data);
 				res.end();
-			},100);
+			},1000);
 		}else{
 			res.write(data);
 			res.end();

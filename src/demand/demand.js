@@ -42,8 +42,11 @@ export default function demand(dep, cb) {
 		module.status ? runUse.call(_this) : null;
 
 	} else if(fn.isStr(dep)) {
+		
 		//获取模块
-		return findModule.call(_this, dep)['_export_'];
+		const module = findModule.call(_this, dep);
+		//这理由循环依赖的问题，如果当前的模块是未加载的，直接返回undefined
+		return module.isDemand ? module['_export_'] : undefined;
 	}
 }
 
@@ -52,6 +55,7 @@ demand.origin = (function() {
 	return(location.origin || location.protocol + '//' + location.host);
 })();
 
+//是否config过
 let isConfig = false;
 
 //配置
@@ -92,6 +96,7 @@ demand.module = {
 	use: [], //use集合
 	lastLoadedModule: {}, //最后获取到的模块
 	depManage: [], //依赖管理
+	depQueue: [], //依赖队列
 	status: false //全部的use加载状态
 };
 

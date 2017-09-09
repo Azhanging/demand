@@ -60,7 +60,7 @@ export function setModule(opts) {
 	opts.findM.isDemand = false;
 
 	//运行模块内容，返回接口
-	this.module.depManage.unshift(opts.findM);
+	this.module.depManage.push(opts.findM);
 
 	//重设最后的模块
 	resetLastLoadedModule.call(this);

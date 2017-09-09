@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+	</head>
+
+	<body>
+		<script src="./dist/js/demand.js" type="text/javascript" charset="utf-8"></script>
+		<script type="text/javascript">
+			demand.config({
+				baseUrl: '/demand/module1',
+				shim: { //定义demand中的模块规则
+					'$': {
+						dep: ['https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js'],
+						_export_: 'jQuery'
+					}
+				},
+				paths: {
+					app0: './m0'
+				}
+			});
+
+			demand(() => {
+				console.log(123);
+			});
+
+			//这里的入口必须为上面paths定义的入口
+			demand(['./m0'], (app0) => {
+				app0();
+			});
+			
+		</script>
+	</body>
+
+</html>
