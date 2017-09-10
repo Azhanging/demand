@@ -20,7 +20,8 @@
 				shim: { //定义demand中的模块规则
 					'$': {
 						dep: ['https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.5/require.min.js'],
-						_export_: 'jQuery'
+						_export_: 'jQuery',
+						context: this
 					}
 				},
 				paths: {

@@ -69,7 +69,7 @@ export function setModule(opts) {
 //重设最后的模块,在http模块中会存在不同规格的内容，需要设置一个空的规格
 function resetLastLoadedModule() {
 	this.module.lastLoadedModule = {
-		_export_() {},
+		_export_() {return ()=>{}},
 		dep: [],
 		id: null
 	};

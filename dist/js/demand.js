@@ -4,7 +4,7 @@
  * 			(c) 2016-2017 Blue
  * 			Released under the MIT License.
  * 			https://github.com/azhanging/demand
- * 			time:Sat Sep 09 2017 11:21:42 GMT+0800 (中国标准时间)
+ * 			time:Sat Sep 09 2017 22:54:30 GMT+0800 (中国标准时间)
  * 		
  */
 /******/ (function(modules) { // webpackBootstrap
@@ -251,7 +251,9 @@ function setModule(opts) {
 //重设最后的模块,在http模块中会存在不同规格的内容，需要设置一个空的规格
 function resetLastLoadedModule() {
 	this.module.lastLoadedModule = {
-		_export_: function _export_() {},
+		_export_: function _export_() {
+			return function () {};
+		},
 
 		dep: [],
 		id: null
@@ -518,7 +520,7 @@ var queue = exports.queue = new Queue();
 
 
 Object.defineProperty(exports, "__esModule", {
-	value: true
+    value: true
 });
 exports.createScript = createScript;
 exports.isCreateScript = isCreateScript;
@@ -542,55 +544,60 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 //创建script节点
 function createScript(opts) {
-	var _this = this;
+    var _this = this;
 
-	var script = document.createElement('script');
-	//获取模块
-	opts.findM = _module.findModule.call(this, opts.url);
-	//异步加载    
-	script.async = true;
+    var script = document.createElement('script');
+    //获取模块
+    opts.findM = _module.findModule.call(this, opts.url);
+    //异步加载    
+    script.async = true;
 
-	delete opts.findM.createScript;
+    delete opts.findM.createScript;
 
-	script.onload = function () {
-		_module.setModule.call(_this, opts);
-		_queue.queue.next();
-	};
+    script.onload = function () {
+        _module.setModule.call(_this, opts);
+        _queue.queue.next();
+    };
 
-	script.onerror = function () {
-		_module.removeModule.call(_this, opts);
-		(0, _error2.default)(1, opts.url);
-		_queue.queue.next();
-	};
+    script.onerror = function () {
+        _module.removeModule.call(_this, opts);
+        (0, _error2.default)(1, opts.url);
+        try {
+            script.remove();
+        } catch (e) {
+            script.parentNode.removeChild(script);
+        }
+        _queue.queue.next();
+    };
 
-	script.type = "text/javascript";
+    script.type = "text/javascript";
 
-	//先判断是否为http模块，否则就是baseUrl中的模块
-	script.src = (0, _path.isHttpModule)(opts.url) ? opts.url : (0, _path.resolveJsExt)(opts.url);
+    //先判断是否为http模块，否则就是baseUrl中的模块
+    script.src = (0, _path.isHttpModule)(opts.url) ? opts.url : (0, _path.resolveJsExt)(opts.url);
 
-	//添加依赖队列数据
-	_queue.queue.push(false);
+    //添加依赖队列数据
+    _queue.queue.push(false);
 
-	document.getElementsByTagName('head')[0].appendChild(script);
+    document.getElementsByTagName('head')[0].appendChild(script);
 }
 
 //检测单前模块script是否加载了
 function isCreateScript(path) {
-	var findM = _module.findModule.call(this, path);
-	if (_fn2.default.isFn(findM.createScript)) {
-		return findM.createScript;
-	} else {
-		return false;
-	}
+    var findM = _module.findModule.call(this, path);
+    if (_fn2.default.isFn(findM.createScript)) {
+        return findM.createScript;
+    } else {
+        return false;
+    }
 }
 
 //运行插入模块
 function runCreateScript(loadModules) {
-	var _this2 = this;
+    var _this2 = this;
 
-	_fn2.default.each(loadModules, function (path, index) {
-		createScript.call(_this2, path);
-	});
+    _fn2.default.each(loadModules, function (path, index) {
+        createScript.call(_this2, path);
+    });
 }
 
 /***/ }),

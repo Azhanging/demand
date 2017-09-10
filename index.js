@@ -23,7 +23,7 @@ const server = http.createServer((req, res) => {
 			setTimeout(()=>{
 				res.write(data);
 				res.end();
-			},1000);
+			},10);
 		}else{
 			res.write(data);
 			res.end();
