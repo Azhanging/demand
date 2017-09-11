@@ -26,6 +26,10 @@ export function useQueue() {
 export function runUse() {
 	const module = this.module;
 	let cbDeps = [];
+	
+	//异步加载并发出现use顺序加载问题
+	if(queue.hasVal()) return;
+	
 	while(module.use.length !== 0) {
 		const depData = module.use.shift();
 		fn.each(depData.dep, (dep, index) => {

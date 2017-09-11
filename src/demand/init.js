@@ -6,9 +6,6 @@ import { createScript, isCreateScript } from './script';
 
 import fn from './fn';
 
-//设置alias的规则
-const ALIAS_PATH = /^@\S{1,}/;
-
 //设置模块路径
 export function setPaths(paths) {
 
@@ -57,9 +54,7 @@ export function setPaths(paths) {
 export function setAlias(alias) {
 	const aliasPath = {};
 	fn.each(alias, (path, key) => {
-		if(ALIAS_PATH.test(key)) {
-			aliasPath[key] = path;
-		}
+		aliasPath['@' + key] = path;
 	});
 	return aliasPath;
 }

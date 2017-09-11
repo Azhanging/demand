@@ -48,7 +48,7 @@ const ALIAS = /@(.*?)/g;
 
 //处理alias的数据
 function resolveAlias(path){
-	
+	ALIAS.lastIndex = 0;
 	//如果不存在别名，直接返回路径
 	if(!ALIAS.test(path)){
 		return path;	

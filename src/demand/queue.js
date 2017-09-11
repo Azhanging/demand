@@ -10,11 +10,14 @@ export default class Queue {
         this.queue.push(fn);
     }
     next() {
-        if(this.queue.length != 0) {
+        if(this.hasVal()) {
             this.queue.shift();
         }
         
         if(this.queue.length === 0) this.cb();
+    }
+    hasVal(){
+    	return this.queue.length != 0;
     }
 }
 

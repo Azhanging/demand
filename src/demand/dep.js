@@ -31,7 +31,7 @@ export function buildModuleDep(module) {
 			 *	有关循环依赖的问题问题
 			 * */
 
-			if(findM && !findM.build ) {
+			if(findM && !findM.build) {
 				buildModuleDep.call(this, findM);
 			}
 

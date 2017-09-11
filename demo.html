@@ -10,12 +10,14 @@
 
 	<body>
 		<script src="./dist/js/demand.js" type="text/javascript" charset="utf-8"></script>
+		<script src="module/tmpl.js" type="text/javascript" charset="utf-8"></script>
+		<script src="module/m5.js" type="text/javascript" charset="utf-8"></script>
 		<script type="text/javascript">
 			demand.config({
 				baseUrl: '/module',
 				alias: {
-					'@alias0': './alias0',
-					'@alias1': '/alias1'
+					'alias0': './alias0',
+					'alias1': '/alias1'
 				},
 				shim: { //定义demand中的模块规则
 					'$': {

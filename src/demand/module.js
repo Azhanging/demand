@@ -6,6 +6,10 @@ import { resolvePath } from './path';
 
 import { runCreateScript } from './script';
 
+import { resetLastModule } from './config';
+
+import error from './error';
+
 //has module in demand
 export function hasModule(m) {
 	const path = resolvePath.call(this, m),
@@ -28,9 +32,10 @@ export function findModule(m) {
 }
 
 //del error module
-export function removeModule(opts){
+export function removeModule(opts) {
 	delete this.module.urlModule[opts.url];
 	delete this.module.pathModule[opts.name];
+	resetLastLoadedModule.call(this);
 }
 
 //set module config
@@ -66,11 +71,30 @@ export function setModule(opts) {
 	resetLastLoadedModule.call(this);
 }
 
-//重设最后的模块,在http模块中会存在不同规格的内容，需要设置一个空的规格
+/*
+ * 重设最后的模块,在http模块中会存在不同规格的内容，需要设置一个空的规格
+ * */
 function resetLastLoadedModule() {
-	this.module.lastLoadedModule = {
-		_export_() {return ()=>{}},
-		dep: [],
-		id: null
-	};
+	this.module.lastLoadedModule = resetLastModule;
+}
+
+//是否为script直接加载的模块
+export function isScriptModule(module) {
+	if(module !== resetLastModule) return true;
+	return false;
+}
+
+//设置script直接加载的模块
+export function setScriptLoadedModule(module) {
+	
+	if(module.id === null) {
+		error(3);
+		return;
+	}
+	
+	setModule.call(this, {
+		url: null,
+		name: null,
+		findM: module
+	});
 }

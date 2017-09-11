@@ -1,10 +1,14 @@
-import { hasModule, findModule } from './module';
+import { hasModule, findModule, setIdModule, isScriptModule, setScriptLoadedModule } from './module';
 
 import { useQueue, checkRunUse, runUse } from './use';
 //初始化
 import { setAlias, setPaths } from './init';
 
 import { setShim } from './shim';
+
+import { config, resetLastModule } from './config';
+
+import { runCreateScript } from './script';
 
 import error from './error';
 
@@ -42,7 +46,7 @@ export default function demand(dep, cb) {
 		module.status ? runUse.call(_this) : null;
 
 	} else if(fn.isStr(dep)) {
-		
+
 		//获取模块
 		const module = findModule.call(_this, dep);
 		//这理由循环依赖的问题，如果当前的模块是未加载的，直接返回undefined
@@ -64,10 +68,13 @@ demand.config = function(opts) {
 		error(0);
 		return;
 	}
+
+	opts = fn.extend(config, opts);
+
 	//设置源路径
 	this.baseUrl = opts.baseUrl ? opts.baseUrl : this.origin;
 	//配置别名
-	this.alias = fn.isObj(opts.alias) ? setAlias(opts.alias) : {};
+	this.alias = setAlias(opts.alias);
 	//设置shim配置
 	setShim.call(this, opts.shim);
 	//设置paths
@@ -80,8 +87,16 @@ demand.config = function(opts) {
 
 //再config后以后加载模块
 demand.loadModule = function(paths) {
-	if(fn.isObj(paths)) setPaths.call(this, paths);
-	else if(fn.isStr(paths)) setPaths.call(this, [paths]);
+	let loadModules;
+
+	if(fn.isObj(paths)) {
+		loadModules = setPaths.call(this, paths);
+	} else if(fn.isStr(paths)) {
+		loadModules = setPaths.call(this, [paths]);
+	}
+
+	runCreateScript.call(this, loadModules);
+
 	this.module.status = false;
 }
 
@@ -94,7 +109,7 @@ demand.module = {
 	idModule: {}, //id模块
 	urlModule: {}, //url路径的模块
 	use: [], //use集合
-	lastLoadedModule: {}, //最后获取到的模块
+	lastLoadedModule: resetLastModule, //最后获取到的模块
 	depManage: [], //依赖管理
 	depQueue: [], //依赖队列
 	status: false //全部的use加载状态
@@ -124,6 +139,14 @@ demand.define = function(id, dep, cb) {
 	} else {
 		throw('error');
 	}
+	/*
+	 *	检查非paths或者是dep中加载的模块设置
+	 * */
+
+	if(isScriptModule(this.module.lastLoadedModule)) {
+		setScriptLoadedModule.call(this, this.module.lastLoadedModule);
+	}
+
 	//设置到最后一个接
 	this.module.lastLoadedModule = module;
 };

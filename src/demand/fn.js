@@ -42,6 +42,12 @@ class Fn {
 		});
 		return expr;
 	}
+	extend(obj, options) { //合并
+		this.each(options, (option, key) => {
+			obj[key] = option;
+		});
+		return obj;
+	}
 }
 
 export default new Fn();

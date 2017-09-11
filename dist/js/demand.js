@@ -4,7 +4,7 @@
  * 			(c) 2016-2017 Blue
  * 			Released under the MIT License.
  * 			https://github.com/azhanging/demand
- * 			time:Sat Sep 09 2017 22:54:30 GMT+0800 (中国标准时间)
+ * 			time:Mon Sep 11 2017 15:31:18 GMT+0800 (中国标准时间)
  * 		
  */
 /******/ (function(modules) { // webpackBootstrap
@@ -72,7 +72,7 @@
 /******/ 	__webpack_require__.p = "/dist";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 12);
+/******/ 	return __webpack_require__(__webpack_require__.s = 13);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -155,6 +155,15 @@ var Fn = function () {
 			});
 			return expr;
 		}
+	}, {
+		key: 'extend',
+		value: function extend(obj, options) {
+			//合并
+			this.each(options, function (option, key) {
+				obj[key] = option;
+			});
+			return obj;
+		}
 	}]);
 
 	return Fn;
@@ -172,20 +181,62 @@ exports.default = new Fn();
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
+exports.default = error;
+/*
+ *	错误处理 
+ * */
+
+function error(errCode, msg) {
+	switch (errCode) {
+		case 0:
+			console.warn('只允许实例化一次！');
+			break;
+		case 1:
+			console.error(msg + '加载模块出错！');
+			break;
+		case 2:
+			console.error('模块使用有误，不能当前模块依赖于自身！');
+			break;
+		case 3:
+			console.error('非paths和dep中加载的模块（即直接加载script的模块需要添加id来识别模块）');
+			break;
+		default:
+			console.error('模块运行有误：' + msg);
+	}
+}
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
 exports.hasModule = hasModule;
 exports.findModule = findModule;
 exports.removeModule = removeModule;
 exports.setModule = setModule;
+exports.isScriptModule = isScriptModule;
+exports.setScriptLoadedModule = setScriptLoadedModule;
 
 var _fn = __webpack_require__(0);
 
 var _fn2 = _interopRequireDefault(_fn);
 
-var _init = __webpack_require__(4);
+var _init = __webpack_require__(6);
 
 var _path = __webpack_require__(3);
 
-var _script = __webpack_require__(6);
+var _script = __webpack_require__(4);
+
+var _config = __webpack_require__(5);
+
+var _error = __webpack_require__(1);
+
+var _error2 = _interopRequireDefault(_error);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -213,6 +264,7 @@ function findModule(m) {
 function removeModule(opts) {
 	delete this.module.urlModule[opts.url];
 	delete this.module.pathModule[opts.name];
+	resetLastLoadedModule.call(this);
 }
 
 //set module config
@@ -248,47 +300,32 @@ function setModule(opts) {
 	resetLastLoadedModule.call(this);
 }
 
-//重设最后的模块,在http模块中会存在不同规格的内容，需要设置一个空的规格
+/*
+ * 重设最后的模块,在http模块中会存在不同规格的内容，需要设置一个空的规格
+ * */
 function resetLastLoadedModule() {
-	this.module.lastLoadedModule = {
-		_export_: function _export_() {
-			return function () {};
-		},
-
-		dep: [],
-		id: null
-	};
+	this.module.lastLoadedModule = _config.resetLastModule;
 }
 
-/***/ }),
-/* 2 */
-/***/ (function(module, exports, __webpack_require__) {
+//是否为script直接加载的模块
+function isScriptModule(module) {
+	if (module !== _config.resetLastModule) return true;
+	return false;
+}
 
-"use strict";
+//设置script直接加载的模块
+function setScriptLoadedModule(module) {
 
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-exports.default = error;
-/*
- *	错误处理 
- * */
-
-function error(errCode, msg) {
-	switch (errCode) {
-		case 0:
-			console.warn('只允许实例化一次！');
-			break;
-		case 1:
-			console.error(msg + '加载模块出错！');
-			break;
-		case 2:
-			console.error('模块使用有误，不能当前模块依赖于自身！');
-			break;
-		default:
-			console.error('模块运行有误：' + msg);
+	if (module.id === null) {
+		(0, _error2.default)(3);
+		return;
 	}
+
+	setModule.call(this, {
+		url: null,
+		name: null,
+		findM: module
+	});
 }
 
 /***/ }),
@@ -358,7 +395,7 @@ var ALIAS = /@(.*?)/g;
 
 //处理alias的数据
 function resolveAlias(path) {
-
+	ALIAS.lastIndex = 0;
 	//如果不存在别名，直接返回路径
 	if (!ALIAS.test(path)) {
 		return path;
@@ -384,23 +421,134 @@ function resolveAlias(path) {
 Object.defineProperty(exports, "__esModule", {
 	value: true
 });
+exports.createScript = createScript;
+exports.isCreateScript = isCreateScript;
+exports.runCreateScript = runCreateScript;
+
+var _module = __webpack_require__(2);
+
+var _path = __webpack_require__(3);
+
+var _queue = __webpack_require__(7);
+
+var _fn = __webpack_require__(0);
+
+var _fn2 = _interopRequireDefault(_fn);
+
+var _error = __webpack_require__(1);
+
+var _error2 = _interopRequireDefault(_error);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+//创建script节点
+function createScript(opts) {
+	var _this = this;
+
+	var script = document.createElement('script');
+	//获取模块
+	opts.findM = _module.findModule.call(this, opts.url);
+	//异步加载    
+	script.async = true;
+
+	delete opts.findM.createScript;
+
+	script.onload = function () {
+		_module.setModule.call(_this, opts);
+		_queue.queue.next();
+	};
+
+	script.onerror = function () {
+		_module.removeModule.call(_this, opts);
+		(0, _error2.default)(1, opts.url);
+		try {
+			script.remove();
+		} catch (e) {
+			script.parentNode.removeChild(script);
+		}
+		_queue.queue.next();
+	};
+
+	script.type = "text/javascript";
+
+	//先判断是否为http模块，否则就是baseUrl中的模块
+	script.src = (0, _path.isHttpModule)(opts.url) ? opts.url : (0, _path.resolveJsExt)(opts.url);
+
+	//添加依赖队列数据
+	_queue.queue.push(false);
+
+	document.getElementsByTagName('head')[0].appendChild(script);
+}
+
+//检测单前模块script是否加载了
+function isCreateScript(path) {
+	var findM = _module.findModule.call(this, path);
+	if (_fn2.default.isFn(findM.createScript)) {
+		return findM.createScript;
+	} else {
+		return false;
+	}
+}
+
+//运行插入模块
+function runCreateScript(loadModules) {
+	var _this2 = this;
+
+	_fn2.default.each(loadModules, function (path, index) {
+		createScript.call(_this2, path);
+	});
+}
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+/*默认配置参数*/
+var config = exports.config = {
+	alias: {},
+	shim: {},
+	paths: {}
+
+	/*设置默认reset的lastModule*/
+};var resetLastModule = exports.resetLastModule = {
+	_export_: function _export_() {
+		return function () {};
+	},
+
+	dep: [],
+	id: null
+};
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
 exports.setPaths = setPaths;
 exports.setAlias = setAlias;
 
 var _path = __webpack_require__(3);
 
-var _module = __webpack_require__(1);
+var _module = __webpack_require__(2);
 
-var _script = __webpack_require__(6);
+var _script = __webpack_require__(4);
 
 var _fn = __webpack_require__(0);
 
 var _fn2 = _interopRequireDefault(_fn);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-//设置alias的规则
-var ALIAS_PATH = /^@\S{1,}/;
 
 //设置模块路径
 function setPaths(paths) {
@@ -454,15 +602,13 @@ function setPaths(paths) {
 function setAlias(alias) {
 	var aliasPath = {};
 	_fn2.default.each(alias, function (path, key) {
-		if (ALIAS_PATH.test(key)) {
-			aliasPath[key] = path;
-		}
+		aliasPath['@' + key] = path;
 	});
 	return aliasPath;
 }
 
 /***/ }),
-/* 5 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -495,11 +641,16 @@ var Queue = function () {
     }, {
         key: "next",
         value: function next() {
-            if (this.queue.length != 0) {
+            if (this.hasVal()) {
                 this.queue.shift();
             }
 
             if (this.queue.length === 0) this.cb();
+        }
+    }, {
+        key: "hasVal",
+        value: function hasVal() {
+            return this.queue.length != 0;
         }
     }]);
 
@@ -513,95 +664,7 @@ exports.default = Queue;
 var queue = exports.queue = new Queue();
 
 /***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.createScript = createScript;
-exports.isCreateScript = isCreateScript;
-exports.runCreateScript = runCreateScript;
-
-var _module = __webpack_require__(1);
-
-var _path = __webpack_require__(3);
-
-var _queue = __webpack_require__(5);
-
-var _fn = __webpack_require__(0);
-
-var _fn2 = _interopRequireDefault(_fn);
-
-var _error = __webpack_require__(2);
-
-var _error2 = _interopRequireDefault(_error);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-//创建script节点
-function createScript(opts) {
-    var _this = this;
-
-    var script = document.createElement('script');
-    //获取模块
-    opts.findM = _module.findModule.call(this, opts.url);
-    //异步加载    
-    script.async = true;
-
-    delete opts.findM.createScript;
-
-    script.onload = function () {
-        _module.setModule.call(_this, opts);
-        _queue.queue.next();
-    };
-
-    script.onerror = function () {
-        _module.removeModule.call(_this, opts);
-        (0, _error2.default)(1, opts.url);
-        try {
-            script.remove();
-        } catch (e) {
-            script.parentNode.removeChild(script);
-        }
-        _queue.queue.next();
-    };
-
-    script.type = "text/javascript";
-
-    //先判断是否为http模块，否则就是baseUrl中的模块
-    script.src = (0, _path.isHttpModule)(opts.url) ? opts.url : (0, _path.resolveJsExt)(opts.url);
-
-    //添加依赖队列数据
-    _queue.queue.push(false);
-
-    document.getElementsByTagName('head')[0].appendChild(script);
-}
-
-//检测单前模块script是否加载了
-function isCreateScript(path) {
-    var findM = _module.findModule.call(this, path);
-    if (_fn2.default.isFn(findM.createScript)) {
-        return findM.createScript;
-    } else {
-        return false;
-    }
-}
-
-//运行插入模块
-function runCreateScript(loadModules) {
-    var _this2 = this;
-
-    _fn2.default.each(loadModules, function (path, index) {
-        createScript.call(_this2, path);
-    });
-}
-
-/***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -657,7 +720,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 })();
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -673,15 +736,19 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 exports.default = demand;
 
-var _module2 = __webpack_require__(1);
+var _module2 = __webpack_require__(2);
 
-var _use = __webpack_require__(11);
+var _use = __webpack_require__(12);
 
-var _init = __webpack_require__(4);
+var _init = __webpack_require__(6);
 
-var _shim = __webpack_require__(10);
+var _shim = __webpack_require__(11);
 
-var _error = __webpack_require__(2);
+var _config = __webpack_require__(5);
+
+var _script = __webpack_require__(4);
+
+var _error = __webpack_require__(1);
 
 var _error2 = _interopRequireDefault(_error);
 
@@ -743,10 +810,13 @@ demand.config = function (opts) {
 		(0, _error2.default)(0);
 		return;
 	}
+
+	opts = _fn2.default.extend(_config.config, opts);
+
 	//设置源路径
 	this.baseUrl = opts.baseUrl ? opts.baseUrl : this.origin;
 	//配置别名
-	this.alias = _fn2.default.isObj(opts.alias) ? (0, _init.setAlias)(opts.alias) : {};
+	this.alias = (0, _init.setAlias)(opts.alias);
 	//设置shim配置
 	_shim.setShim.call(this, opts.shim);
 	//设置paths
@@ -759,7 +829,16 @@ demand.config = function (opts) {
 
 //再config后以后加载模块
 demand.loadModule = function (paths) {
-	if (_fn2.default.isObj(paths)) _init.setPaths.call(this, paths);else if (_fn2.default.isStr(paths)) _init.setPaths.call(this, [paths]);
+	var loadModules = void 0;
+
+	if (_fn2.default.isObj(paths)) {
+		loadModules = _init.setPaths.call(this, paths);
+	} else if (_fn2.default.isStr(paths)) {
+		loadModules = _init.setPaths.call(this, [paths]);
+	}
+
+	_script.runCreateScript.call(this, loadModules);
+
 	this.module.status = false;
 };
 
@@ -772,7 +851,7 @@ demand.module = {
 	idModule: {}, //id模块
 	urlModule: {}, //url路径的模块
 	use: [], //use集合
-	lastLoadedModule: {}, //最后获取到的模块
+	lastLoadedModule: _config.resetLastModule, //最后获取到的模块
 	depManage: [], //依赖管理
 	depQueue: [], //依赖队列
 	status: false //全部的use加载状态
@@ -802,12 +881,20 @@ demand.define = function (id, dep, cb) {
 	} else {
 		throw 'error';
 	}
+	/*
+  *	检查非paths或者是dep中加载的模块设置
+  * */
+
+	if ((0, _module2.isScriptModule)(this.module.lastLoadedModule)) {
+		_module2.setScriptLoadedModule.call(this, this.module.lastLoadedModule);
+	}
+
 	//设置到最后一个接
 	this.module.lastLoadedModule = module;
 };
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -822,9 +909,9 @@ var _fn = __webpack_require__(0);
 
 var _fn2 = _interopRequireDefault(_fn);
 
-var _module = __webpack_require__(1);
+var _module = __webpack_require__(2);
 
-var _error = __webpack_require__(2);
+var _error = __webpack_require__(1);
 
 var _error2 = _interopRequireDefault(_error);
 
@@ -879,7 +966,7 @@ function buildModuleDep(module) {
 }
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -894,7 +981,7 @@ var _fn = __webpack_require__(0);
 
 var _fn2 = _interopRequireDefault(_fn);
 
-var _module = __webpack_require__(1);
+var _module = __webpack_require__(2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -931,7 +1018,7 @@ function shimContext(_shim) {
 }
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -943,15 +1030,15 @@ Object.defineProperty(exports, "__esModule", {
 exports.useQueue = useQueue;
 exports.runUse = runUse;
 
-var _dep = __webpack_require__(9);
+var _dep = __webpack_require__(10);
 
-var _queue = __webpack_require__(5);
+var _queue = __webpack_require__(7);
 
 var _fn = __webpack_require__(0);
 
 var _fn2 = _interopRequireDefault(_fn);
 
-var _error = __webpack_require__(2);
+var _error = __webpack_require__(1);
 
 var _error2 = _interopRequireDefault(_error);
 
@@ -981,6 +1068,10 @@ function runUse() {
 
 	var module = this.module;
 	var cbDeps = [];
+
+	//异步加载并发出现use顺序加载问题
+	if (_queue.queue.hasVal()) return;
+
 	while (module.use.length !== 0) {
 		var depData = module.use.shift();
 		_fn2.default.each(depData.dep, function (dep, index) {
@@ -999,17 +1090,17 @@ function runUse() {
 }
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var _demand = __webpack_require__(8);
+var _demand = __webpack_require__(9);
 
 var _demand2 = _interopRequireDefault(_demand);
 
-var _compatibility = __webpack_require__(7);
+var _compatibility = __webpack_require__(8);
 
 var _compatibility2 = _interopRequireDefault(_compatibility);
 
